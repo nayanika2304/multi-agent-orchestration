@@ -1,0 +1,21 @@
+[project]
+name = "multi-agent-orchestration"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "a2a>=0.44",
+    "a2a-sdk>=0.3.0",
+    "langchain-core>=0.3.73",
+    "mcp[cli]>=1.12.3",
+]
+
+[tool.uv.workspace]
+members = [
+    "agentTemplate",
+    "argocdAgent",
+    "currencyAgent",
+    "mathAgent",
+    "orchestrator_client",
+]
