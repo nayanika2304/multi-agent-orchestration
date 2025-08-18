@@ -340,19 +340,6 @@ message = new_agent_text_message(user_input, context_id)
 response = await client.send_message(message)
 ```
 
-### Push Notification Support
-
-```python
-from orchestrator_client.utils.push_notification_listener import PushNotificationListener
-
-# Start push notification listener
-listener = PushNotificationListener(
-    host="localhost",
-    port=5000,
-    notification_receiver_auth=auth
-)
-listener.start()
-```
 
 ### Session Management
 
