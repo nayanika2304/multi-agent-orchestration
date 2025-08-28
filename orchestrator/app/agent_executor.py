@@ -210,7 +210,7 @@ class OrchestratorAgentExecutor(AgentExecutor):
                     ),
                 )
                 
-                result = await self.orchestrator.process_request(query)
+                result = await self.orchestrator.process_request(query, session_id=task.context_id)
                 logger.info(f"Orchestrator result: {result}")
                 
                 # Update task status with routing decision

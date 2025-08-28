@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Smart Orchestrator Agent with A2A SDK integration
+Smart Orchestrator Agent with A2A SDK integration and Context Management
 """
 import asyncio
 import uuid
@@ -11,9 +11,12 @@ from a2a.client import A2AClient, A2ACardResolver
 import httpx
 from langgraph.graph import StateGraph
 from a2a.types import AgentCard, AgentSkill, AgentCapabilities
+from app.context_manager import OrchestratorContextManager
 
 class RouterState(TypedDict):
     request: str
+    original_request: str
+    session_id: str
     selected_agent: str
     confidence: float
     reasoning: str
@@ -23,12 +26,13 @@ class RouterState(TypedDict):
 
 
 class SmartOrchestrator:
-    """Intelligent orchestrator using A2A SDK types and LangGraph workflow"""
+    """Intelligent orchestrator using A2A SDK types and LangGraph workflow with Context Management"""
     
     def __init__(self):
         self.agents: Dict[str, AgentCard] = {}
         self.skill_keywords: Dict[str, List[str]] = {}
         self.agent_capabilities: Dict[str, Dict[str, Any]] = {}
+        self.context_manager = OrchestratorContextManager()
         self.workflow = self._create_workflow()
         self._initialize_default_agents()
     
@@ -39,7 +43,9 @@ class SmartOrchestrator:
         default_agents = [
             "http://localhost:8001",
             "http://localhost:8002",
-            "http://localhost:8003"
+            "http://localhost:8003",
+            "http://localhost:8004",
+            "http://localhost:8005",
         ]
         
         # Fetch agent cards using A2A client - run async initialization
@@ -200,6 +206,18 @@ class SmartOrchestrator:
                 "success": False,
                 "error": f"Error registering agent from {endpoint}: {str(e)}"
             }
+    
+    def get_conversation_context(self, session_id: str) -> Dict[str, Any]:
+        """Get conversation context for a session"""
+        return self.context_manager.get_conversation_context(session_id)
+    
+    def get_session_stats(self) -> Dict[str, Any]:
+        """Get statistics about active sessions"""
+        return self.context_manager.get_session_stats()
+    
+    def cleanup_expired_sessions(self) -> int:
+        """Clean up expired sessions"""
+        return self.context_manager.cleanup_expired_sessions()
     
     async def unregister_agent(self, agent_identifier: str) -> Dict:
         """Unregister an agent by agent_id, endpoint, or name"""
@@ -544,7 +562,7 @@ class SmartOrchestrator:
         try:
             print(f"   📡 Forwarding request to agent...")
             # Forward the request to the selected agent and get the actual response
-            actual_response = await self._forward_request_to_agent(endpoint, request)
+            actual_response = await self._forward_request_to_agent(endpoint, request, state["session_id"])
             print(f"   ✅ Received response from agent: '{actual_response[:100]}{'...' if len(actual_response) > 100 else ''}'")
             state["response"] = f"🎯 Routed to {agent_card.name} → {actual_response}"
             state["metadata"]["status"] = "completed"
@@ -566,15 +584,16 @@ class SmartOrchestrator:
         
         return state
     
-    async def _forward_request_to_agent(self, endpoint: str, request: str) -> str:
-        """Forward request to agent using A2A protocol"""
+    async def _forward_request_to_agent(self, endpoint: str, request: str, session_id: str) -> str:
+        """Forward request to agent using A2A protocol with consistent session ID"""
         import json
         from uuid import uuid4
         
         # Create A2A JSON-RPC request payload using message/send method
         task_id = str(uuid4())
         message_id = str(uuid4())
-        context_id = str(uuid4())
+        # Use session_id as context_id for consistency across agents
+        context_id = session_id
         
         payload = {
             "jsonrpc": "2.0",
@@ -692,16 +711,34 @@ class SmartOrchestrator:
         except Exception as e:
             raise Exception(f"Request forwarding failed: {str(e)}")
 
-    async def process_request(self, request: str) -> Dict:
-        """Process a request through the LangGraph workflow"""
+    async def process_request(self, request: str, session_id: Optional[str] = None) -> Dict:
+        """Process a request through the LangGraph workflow with context management"""
+        # Get or create session
+        session_id = self.context_manager.get_or_create_session(session_id)
+        
+        # Store original request
+        original_request = request
+        
+        # Enrich request with context if needed
+        enriched_request = self.context_manager.enrich_query_with_context(session_id, request)
+        
+        # Log context enrichment if it occurred
+        context_enriched = enriched_request != request
+        if context_enriched:
+            print(f"🔗 Context Enrichment Applied:")
+            print(f"   Original: '{request}'")
+            print(f"   Enriched: '{enriched_request}'")
+        
         initial_state = RouterState(
-            request=request,
+            request=enriched_request,
+            original_request=original_request,
+            session_id=session_id,
             selected_agent="",
             confidence=0.0,
             reasoning="",
             response="",
             error="",
-            metadata={}
+            metadata={"context_enriched": context_enriched}
         )
         
         try:
@@ -709,36 +746,60 @@ class SmartOrchestrator:
             
             # Handle case where no agent was selected
             if not final_state["selected_agent"]:
-                return {
-                    "success": True,
-                    "request": request,
-                    "selected_agent_id": "",
-                    "selected_agent_name": "None",
-                    "agent_skills": [],
-                    "confidence": 0.0,
-                    "reasoning": final_state["reasoning"],
-                    "response": final_state["response"],
-                    "metadata": final_state["metadata"]
-                }
+                            return {
+                "success": True,
+                "request": request,
+                "original_request": final_state["original_request"],
+                "enriched_request": final_state["request"],
+                "session_id": final_state["session_id"],
+                "selected_agent_id": "",
+                "selected_agent_name": "None",
+                "agent_skills": [],
+                "confidence": 0.0,
+                "reasoning": final_state["reasoning"],
+                "response": final_state["response"],
+                "metadata": final_state["metadata"],
+                "context_enriched": final_state["metadata"].get("context_enriched", False)
+            }
             
             agent_card = self.agents[final_state["selected_agent"]]
+            
+            # Record conversation turn for context management
+            if final_state["selected_agent"]:
+                self.context_manager.add_conversation_turn(
+                    session_id=final_state["session_id"],
+                    user_query=final_state["original_request"],
+                    agent_name=agent_card.name,
+                    agent_response=final_state["response"],
+                    routing_confidence=final_state["confidence"],
+                    metadata={
+                        "agent_id": final_state["selected_agent"],
+                        "reasoning": final_state["reasoning"],
+                        "context_enriched": final_state["metadata"].get("context_enriched", False)
+                    }
+                )
             
             return {
                 "success": True,
                 "request": request,
+                "original_request": final_state["original_request"],
+                "enriched_request": final_state["request"],
+                "session_id": final_state["session_id"],
                 "selected_agent_id": final_state["selected_agent"],
                 "selected_agent_name": agent_card.name,
                 "agent_skills": [skill.name for skill in agent_card.skills],
                 "confidence": final_state["confidence"],
                 "reasoning": final_state["reasoning"],
                 "response": final_state["response"],
-                "metadata": final_state["metadata"]
+                "metadata": final_state["metadata"],
+                "context_enriched": final_state["metadata"].get("context_enriched", False)
             }
             
         except Exception as e:
             return {
                 "success": False,
                 "request": request,
+                "session_id": session_id,
                 "error": str(e),
                 "metadata": {
                     "request_id": str(uuid.uuid4()),

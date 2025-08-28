@@ -18,4 +18,6 @@ members = [
     "currencyAgent",
     "mathAgent",
     "orchestrator_client",
+    "RAG",
+    "RAG/ragAgent",
 ]
