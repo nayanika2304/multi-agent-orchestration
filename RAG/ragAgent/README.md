@@ -2,7 +2,7 @@
 
 A sophisticated RAG (Retrieval-Augmented Generation) agent built with [LangGraph](https://langchain-ai.github.io/langgraph/) and exposed through the A2A protocol. It provides intelligent document retrieval, semantic search, and comprehensive answer generation with MCP (Model Context Protocol) tool capabilities for external integration. **The agent integrates seamlessly with the [intelligent orchestrator system](../../orchestrator/README.md) for automatic routing**.
 
-## 🚀 **Smart Orchestrator Integration**
+##  **Smart Orchestrator Integration**
 
 The RAG Agent integrates with the intelligent orchestrator for automatic routing:
 
@@ -20,17 +20,17 @@ The RAG Agent integrates with the intelligent orchestrator for automatic routing
 "complete RAG processing" → RAG Agent (95% confidence)
 ```
 
-## 🏗️ System Integration
+##  System Integration
 
 This agent integrates seamlessly with the orchestrator system:
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🤖 Smart Orchestrator]
+    A[User Request] --> B[ Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Skill Analysis]
     D --> E{Confidence Scoring}
-    E -->|High Score| F[🔍 RAG Agent - Port 8004]
+    E -->|High Score| F[ RAG Agent - Port 8004]
     E -->|Low Score| G[Other Agents]
     
     F --> H[LangGraph ReAct Agent]
@@ -58,35 +58,35 @@ graph TD
     end
 ```
 
-## ✨ Key Features
+##  Key Features
 
-### 🔍 **MCP Tool Capabilities**
+###  **MCP Tool Capabilities**
 - **search_documents**: Search through documents using semantic search
 - **query_database**: Execute database queries to retrieve structured data
 - **retrieve_context**: Get relevant context and background information
 - **semantic_search**: Perform advanced semantic search across indexed content  
 - **perform_rag_query**: Complete RAG processing with planning, retrieval, analysis, and synthesis
 
-### 📄 **RAG Processing Pipeline**
+###  **RAG Processing Pipeline**
 - **Planning**: Breaks down complex queries into precise retrieval subtasks
 - **Retrieval**: Semantic search across vector database with multiple strategies
 - **Analysis**: Extracts key facts with citations from retrieved documents
 - **Synthesis**: Generates comprehensive answers with proper citations
 - **Context Management**: Intelligent context window tracking and summarization
 
-### 🤖 **Advanced AI Capabilities**  
+###  **Advanced AI Capabilities**  
 - **Multi-turn Conversations**: Agent maintains context across interactions
 - **Real-time Streaming**: Provides status updates during processing
 - **Conversational Memory**: Context tracking with automatic summarization
 - **A2A Protocol**: Standardized communication interface
 
-### 🔗 **Orchestrator Integration**
+###  **Orchestrator Integration**
 - **Automatic Routing**: Intelligent routing based on request content
 - **Skill Discovery**: Capabilities automatically discovered by orchestrator
 - **Confidence Scoring**: High-confidence routing for search and retrieval operations
 - **Dynamic Registration**: Can be registered/unregistered at runtime
 
-## 🎯 Supported Operations
+##  Supported Operations
 
 ### Document Search & Retrieval
 - **Semantic Search**: "Search for documents about machine learning"
@@ -108,7 +108,7 @@ graph TD
 - **Research Reports**: "Complete research on technology adoption"
 - **Cited Responses**: "Full analysis with citations and sources"
 
-## 📊 Agent Card (A2A Integration)
+##  Agent Card (A2A Integration)
 
 ### Orchestrator Recognition
 
@@ -148,7 +148,7 @@ RAG Agent Card:
 "database querying" → RAG Agent (88%)
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Option 1: Via Orchestrator (Recommended)
 
@@ -201,7 +201,7 @@ curl -X POST http://localhost:8004 \
   -d '{"method": "tools/call", "params": {"name": "search_documents", "arguments": {"query": "artificial intelligence", "max_results": 5}}}'
 ```
 
-## 🧪 Testing & Validation
+##  Testing & Validation
 
 ### Comprehensive Test Suite
 
@@ -225,22 +225,22 @@ curl -X POST http://localhost:8004 \
 
 **RAG Operations**:
 ```
-✅ Document Search: "Found 5 relevant documents about artificial intelligence"
-✅ Semantic Search: "Retrieved semantically similar content with 0.95 similarity"
-✅ Context Retrieval: "Background information collected from 3 sources"
-✅ Complete RAG: "Comprehensive answer generated with citations [1][2][3]"
+ Document Search: "Found 5 relevant documents about artificial intelligence"
+ Semantic Search: "Retrieved semantically similar content with 0.95 similarity"
+ Context Retrieval: "Background information collected from 3 sources"
+ Complete RAG: "Comprehensive answer generated with citations [1][2][3]"
 ```
 
 **MCP Tool Operations**:
 ```
-✅ search_documents: "JSON response with document results and metadata"
-✅ query_database: "Structured data retrieved and formatted as JSON"
-✅ retrieve_context: "Contextual information with sources and related topics"
-✅ semantic_search: "Advanced semantic search results with similarity scores"
-✅ perform_rag_query: "Complete RAG response with plan, insights, and citations"
+ search_documents: "JSON response with document results and metadata"
+ query_database: "Structured data retrieved and formatted as JSON"
+ retrieve_context: "Contextual information with sources and related topics"
+ semantic_search: "Advanced semantic search results with similarity scores"
+ perform_rag_query: "Complete RAG response with plan, insights, and citations"
 ```
 
-## 🔧 Technical Architecture
+##  Technical Architecture
 
 ### LangGraph Integration
 
@@ -306,7 +306,7 @@ The agent uses a sophisticated multi-stage pipeline:
 4. **Synthesis Stage**: Generates final answer with inline citations
 5. **Context Management**: Automatic summarization every 4 turns to maintain context
 
-## 🛠️ Development
+##  Development
 
 ### Project Structure
 ```
@@ -343,7 +343,7 @@ export TOOL_LLM_URL="https://your-custom-endpoint.com/v1"
 export TOOL_LLM_NAME="gpt-4o-mini"
 ```
 
-## 🔧 Configuration Options
+##  Configuration Options
 
 ### Vector Store Configuration
 ```python
@@ -378,7 +378,7 @@ for tool in tools:
     tool._agent_instance = self
 ```
 
-## 📚 API Reference
+##  API Reference
 
 ### RAGAgent Class
 ```python
@@ -408,4 +408,4 @@ All MCP tools return JSON strings with structured data including:
 
 ---
 
-**Built with LangGraph, A2A Protocol, ChromaDB, and MCP Tools** 🔍
+**Built with LangGraph, A2A Protocol, ChromaDB, and MCP Tools** 

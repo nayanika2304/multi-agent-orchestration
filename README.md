@@ -1,4 +1,4 @@
-# 🤖 Aichestra - Intelligent Multi-Agent Orchestration System
+# Aichestra - Intelligent Multi-Agent Orchestration System
 
 An advanced multi-agent system built with **LangGraph** and **A2A Protocol** that features intelligent request routing, specialized agents for different domains, and dynamic capability discovery.
 
@@ -6,17 +6,17 @@ An advanced multi-agent system built with **LangGraph** and **A2A Protocol** tha
 
 - [Building an Intelligent Multi-Agent Orchestration System with LangGraph, A2A and MCP](https://medium.com/@gyliu513/building-an-intelligent-multi-agent-orchestration-system-with-langgraph-a2a-and-mcp-674efdf666f7)
 
-## 🌟 Overview
+## Overview
 
 This project demonstrates a production-ready agent orchestration system where:
-- **🎯 Smart Orchestrator** intelligently routes requests to the best available agent using skill-based matching
-- **☸️ ArgoCD Agent** handles Kubernetes and GitOps operations  
-- **💰 Currency Agent** manages financial data and currency conversions
-- **🧮 Math Agent** performs advanced mathematical calculations and analysis
-- **🔧 CLI Client** provides interactive command-line interface
-- **📡 A2A Protocol** enables standardized agent communication with dynamic discovery
+- **Smart Orchestrator** intelligently routes requests to the best available agent using skill-based matching
+- **ArgoCD Agent** handles Kubernetes and GitOps operations  
+- **Currency Agent** manages financial data and currency conversions
+- **Math Agent** performs advanced mathematical calculations and analysis
+- **CLI Client** provides interactive command-line interface
+- **A2A Protocol** enables standardized agent communication with dynamic discovery
 
-## 🚀 **Key Features**
+## **Key Features**
 
 ### Intelligent Agent Routing
 - **Dynamic Agent Discovery**: Automatically discovers agent capabilities from AgentCards
@@ -30,11 +30,11 @@ This project demonstrates a production-ready agent orchestration system where:
 - **HTTP Client Integration**: Built-in HTTP client with timeout and error handling
 - **Live Agent Discovery**: Fetches agent cards from running agent endpoints
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🎯 Smart Orchestrator]
+    A[User Request] --> B[Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Agent Discovery]
     D --> E[Skill Analysis]
@@ -43,17 +43,17 @@ graph TD
     F -->|High Score| G[Route to Best Agent]
     F -->|Low Score| H[Fallback/Error]
     
-    G --> I[☸️ ArgoCD Agent]
-    G --> J[💰 Currency Agent]  
-    G --> K[🧮 Math Agent]
+    G --> I[ArgoCD Agent]
+    G --> J[Currency Agent]  
+    G --> K[Math Agent]
     
     I --> L[ArgoCD MCP Server]
     J --> M[Frankfurter API]
     K --> N[Math MCP Server]
     N --> O[SymPy + NumPy]
     
-    P[🔧 Orchestrator Client] --> B
-    Q[📡 HTTP API] --> B
+    P[Orchestrator Client] --> B
+    Q[HTTP API] --> B
     
     subgraph "A2A Integration"
         C
@@ -68,24 +68,24 @@ graph TD
     end
 ```
 
-## 🎯 Agent Capabilities
+## Agent Capabilities
 
-### ☸️ **ArgoCD Agent** (Port 8082)
+### **ArgoCD Agent** (Port 8082)
 - **Skills**: `kubernetes_management`, `gitops`, `application_deployment`, `argocd_operations`
 - **Use Cases**: "List all applications", "Sync guestbook app", "Check deployment status"
 - **Integration**: ArgoCD MCP server with direct API fallback
 
-### 💰 **Currency Agent** (Port 8080)  
+### **Currency Agent** (Port 8080)  
 - **Skills**: `currency_exchange`, `financial_data`, `market_analysis`, `rate_conversion`
 - **Use Cases**: "what is 10 USD to INR?", "What's the exchange rate?", "Historical rates"
 - **Integration**: Frankfurter API with LangGraph ReAct agent
 
-### 🧮 **Math Agent** (Port 8081)
+### **Math Agent** (Port 8081)
 - **Skills**: `arithmetic_calculation`, `equation_solving`, `calculus_operations`, `matrix_operations`
 - **Use Cases**: "What is 2+3?", "Solve x^2-4=0", "Find derivative of x^2"
 - **Integration**: Custom MCP server with SymPy and NumPy
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - **Python 3.10+** (required for A2A SDK compatibility)
@@ -136,7 +136,7 @@ uv run -m app -m "List ArgoCD applications" -v
 uv run -m app -m "LIST_AGENTS"
 ```
 
-## 🎯 Running the Complete System
+##  Running the Complete System
 
 ### Option A: Full Multi-Agent System
 
@@ -198,7 +198,7 @@ uv run -m app -m "REGISTER_AGENT:http://localhost:8080"
 uv run -m app -m "LIST_AGENTS"
 ```
 
-## 🔧 Agent Management
+##  Agent Management
 
 ### Agent Register
 
@@ -207,10 +207,10 @@ uv run -m app -m "LIST_AGENTS"
 Will use headers: {}
 ======= Agent Card ========
 {"capabilities":{"pushNotifications":true,"stateTransitionHistory":false,"streaming":false},"defaultInputModes":["text"],"defaultOutputModes":["text"],"description":"Intelligent agent that routes requests to specialized agents using LangGraph and A2A protocol","name":"Smart Orchestrator Agent","skills":[{"description":"Intelligent request routing to specialized agents","id":"request_routing","name":"Request Routing","tags":["routing","orchestration"]},{"description":"Multi-agent system coordination and management","id":"agent_coordination","name":"Agent Coordination","tags":["coordination","management"]},{"description":"Skill-based agent selection and matching","id":"skill_matching","name":"Skill Matching","tags":["matching","selection"]},{"description":"Confidence scoring for routing decisions","id":"confidence_scoring","name":"Confidence Scoring","tags":["scoring","confidence"]}],"url":"http://localhost:8000/","version":"1.0.0"}
-🔄 Registering agent http://localhost:8003 with orchestrator http://localhost:8000
-📤 Sending registration request...
-🎉 Registration completed successfully!
-📄 ✅ Successfully registered Math Agent from http://localhost:8003
+ Registering agent http://localhost:8003 with orchestrator http://localhost:8000
+ Sending registration request...
+ Registration completed successfully!
+  Successfully registered Math Agent from http://localhost:8003
 Agent ID: Math Agent
 Agent Name: Math Agent
 Total agents: 3
@@ -223,10 +223,10 @@ Total agents: 3
 Will use headers: {}
 ======= Agent Card ========
 {"capabilities":{"pushNotifications":true,"stateTransitionHistory":false,"streaming":false},"defaultInputModes":["text"],"defaultOutputModes":["text"],"description":"Intelligent agent that routes requests to specialized agents using LangGraph and A2A protocol","name":"Smart Orchestrator Agent","skills":[{"description":"Intelligent request routing to specialized agents","id":"request_routing","name":"Request Routing","tags":["routing","orchestration"]},{"description":"Multi-agent system coordination and management","id":"agent_coordination","name":"Agent Coordination","tags":["coordination","management"]},{"description":"Skill-based agent selection and matching","id":"skill_matching","name":"Skill Matching","tags":["matching","selection"]},{"description":"Confidence scoring for routing decisions","id":"confidence_scoring","name":"Confidence Scoring","tags":["scoring","confidence"]}],"url":"http://localhost:8000/","version":"1.0.0"}
-🔄 Unregistering agent http://localhost:8003 from orchestrator http://localhost:8000
-📤 Sending unregistration request...
-🎉 Unregistration completed successfully!
-📄 ✅ Successfully unregistered Math Agent (ID: Math Agent)
+ Unregistering agent http://localhost:8003 from orchestrator http://localhost:8000
+ Sending unregistration request...
+ Unregistration completed successfully!
+  Successfully unregistered Math Agent (ID: Math Agent)
 Agent ID: Math Agent
 Remaining agents: 2
 ```
@@ -240,7 +240,7 @@ Will use headers: {}
 {"capabilities":{"pushNotifications":true,"stateTransitionHistory":false,"streaming":false},"defaultInputModes":["text"],"defaultOutputModes":["text"],"description":"Intelligent agent that routes requests to specialized agents using LangGraph and A2A protocol","name":"Smart Orchestrator Agent","skills":[{"description":"Intelligent request routing to specialized agents","id":"request_routing","name":"Request Routing","tags":["routing","orchestration"]},{"description":"Multi-agent system coordination and management","id":"agent_coordination","name":"Agent Coordination","tags":["coordination","management"]},{"description":"Skill-based agent selection and matching","id":"skill_matching","name":"Skill Matching","tags":["matching","selection"]},{"description":"Confidence scoring for routing decisions","id":"confidence_scoring","name":"Confidence Scoring","tags":["scoring","confidence"]}],"url":"http://localhost:8000/","version":"1.0.0"}
 
 ============================================================
-🤖 AVAILABLE AGENTS
+ AVAILABLE AGENTS
 ============================================================
 Found 3 available agents:
 
@@ -257,11 +257,11 @@ Found 3 available agents:
    Skills: Arithmetic Calculation, Equation Solving, Calculus Operations (+2 more)
 
 ============================================================
-💡 The orchestrator will automatically route your requests to the best agent!
+ The orchestrator will automatically route your requests to the best agent!
 ============================================================
 ```
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 ```
@@ -281,15 +281,15 @@ aichestra/
 - **FastAPI**: High-performance API framework
 - **Google Gemini**: Advanced language model integration
 
-## 📚 Documentation
+## Documentation
 
-- [🎯 Smart Orchestrator](./orchestrator/README.md) - Intelligent routing and A2A integration
-- [☸️ ArgoCD Agent](./argocdAgent/README.md) - Kubernetes operations via MCP
-- [💰 Currency Agent](./currencyAgent/README.md) - Financial data and conversions
-- [🧮 Math Agent](./mathAgent/README.md) - Mathematical computations with MCP
-- [🔧 Orchestrator Client](./orchestrator_client/README.md) - Interactive CLI interface
+- [Smart Orchestrator](./orchestrator/README.md) - Intelligent routing and A2A integration
+- [ArgoCD Agent](./argocdAgent/README.md) - Kubernetes operations via MCP
+- [Currency Agent](./currencyAgent/README.md) - Financial data and conversions
+- [Math Agent](./mathAgent/README.md) - Mathematical computations with MCP
+- [Orchestrator Client](./orchestrator_client/README.md) - Interactive CLI interface
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -300,4 +300,4 @@ aichestra/
 
 ---
 
-**Built with ❤️ using A2A Protocol, LangGraph, and MCP**
+**Built with A2A Protocol, LangGraph, and MCP**

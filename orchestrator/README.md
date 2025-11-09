@@ -1,8 +1,8 @@
-# 🤖 Smart Orchestrator - Intelligent Agent Routing System
+#  Smart Orchestrator - Intelligent Agent Routing System
 
 An intelligent orchestrator agent built with **LangGraph** and **A2A Protocol** that automatically routes user requests to the best available specialized agent using dynamic capability discovery and skill-based matching.
 
-## 🚀 **Key Features**
+##  **Key Features**
 
 The orchestrator provides **intelligent single-agent routing** for optimal request handling:
 
@@ -18,13 +18,13 @@ Agent Registration → AgentCard Analysis → Skill Extraction → Capability Re
 "List applications" → ArgoCD Agent (100% confidence)
 ```
 
-## 🏗️ Architecture
+##  Architecture
 
 The orchestrator uses **A2A SDK integration** with intelligent routing:
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🎯 Smart Orchestrator]
+    A[User Request] --> B[ Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Agent Discovery]
     D --> E[Skill Analysis]
@@ -61,7 +61,7 @@ graph TD
 4. **Agent Communication**: Handles HTTP communication with selected agents
 5. **Response Processing**: Formats agent responses for users
 
-## 🎯 Supported Agents
+##  Supported Agents
 
 ### ArgoCD Agent
 - **Endpoint**: `http://localhost:8001`
@@ -81,7 +81,7 @@ graph TD
 - **Keywords**: `calculate`, `solve`, `equation`, `derivative`, `integral`, `matrix`, `statistics`
 - **Use Cases**: Mathematical calculations, equation solving, calculus, statistics, matrix operations
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Python 3.10+ (required for A2A SDK compatibility)
@@ -110,7 +110,7 @@ uv run -m app -m "LIST_AGENTS"
 uv run -m app -m "REGISTER_AGENT:http://localhost:8080"
 ```
 
-## 🌐 FastAPI Agent Management Endpoints
+##  FastAPI Agent Management Endpoints
 
 The orchestrator now includes **FastAPI endpoints** for programmatic agent management, providing both REST API and interactive documentation.
 
@@ -128,8 +128,8 @@ The server provides both:
 
 ### API Documentation
 
-📖 **Interactive API Docs**: `http://localhost:8000/management/docs`  
-📋 **Alternative Docs**: `http://localhost:8000/management/redoc`
+ **Interactive API Docs**: `http://localhost:8000/management/docs`  
+ **Alternative Docs**: `http://localhost:8000/management/redoc`
 
 ### Available Endpoints
 
@@ -245,15 +245,15 @@ python test_agent_management_api.py --help
 
 ### API Features
 
-- ✅ **RESTful Design**: Proper HTTP methods and status codes
-- ✅ **Input Validation**: Pydantic models for request/response validation  
-- ✅ **Error Handling**: Comprehensive error responses with details
-- ✅ **Interactive Docs**: Swagger UI and ReDoc documentation
-- ✅ **CORS Support**: Cross-origin requests enabled
-- ✅ **Multiple Formats**: Both POST (JSON) and GET (query params) support
-- ✅ **Async Operations**: Non-blocking agent registration/deregistration
+-  **RESTful Design**: Proper HTTP methods and status codes
+-  **Input Validation**: Pydantic models for request/response validation  
+-  **Error Handling**: Comprehensive error responses with details
+-  **Interactive Docs**: Swagger UI and ReDoc documentation
+-  **CORS Support**: Cross-origin requests enabled
+-  **Multiple Formats**: Both POST (JSON) and GET (query params) support
+-  **Async Operations**: Non-blocking agent registration/deregistration
 
-## 🔧 Running the Full System
+##  Running the Full System
 
 ### Step 1: Start the Agents
 
@@ -300,7 +300,7 @@ uv run -m app -m "List all applications in my cluster" -v
 uv run -m app -m "LIST_AGENTS"
 ```
 
-## 🧪 Routing Examples
+##  Routing Examples
 
 ### High-Confidence Routing
 ```bash
@@ -332,7 +332,7 @@ uv run -m app -m "kubernetes cluster management" -v
 # Output: ArgoCD Agent (74% confidence)
 ```
 
-## 🔍 How Agent Discovery Works
+##  How Agent Discovery Works
 
 ### A2A Integration
 1. **Endpoint Discovery**: Connects to default agent endpoints (8080, 8081, 8082)
@@ -362,7 +362,7 @@ def calculate_agent_score(self, request: str, agent_card: AgentCard) -> float:
     # Returns: confidence score (0.0 - 1.0)
 ```
 
-## 🛠️ Technical Implementation
+##  Technical Implementation
 
 ### A2A SDK Integration
 
@@ -411,7 +411,7 @@ httpx.AsyncClient(timeout=5.0, verify=False)
 ```
 
 
-## 🔧 Development
+##  Development
 
 ### Project Structure
 ```
@@ -456,7 +456,7 @@ uv run -m app -m "Your message here" -v
 uv run -m app -m "Convert USD to EUR" -v -d
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Unit Tests
 ```bash
@@ -482,7 +482,7 @@ uv run -m app -m "What is 2+3?" -v
 uv run -m app -m "Convert 100 USD to EUR" -v
 ```
 
-## 📚 API Reference
+##  API Reference
 
 ### SmartOrchestrator Class
 
@@ -502,7 +502,7 @@ class SmartOrchestrator:
 - `get_available_agents()`: List all registered agents
 - `process_request()`: Route request to best agent
 
-## 🔮 Future Enhancements
+##  Future Enhancements
 
 - **Load Balancing**: Route to multiple instances of same agent type
 - **Health Monitoring**: Periodic agent health checks
@@ -512,4 +512,4 @@ class SmartOrchestrator:
 
 ---
 
-**Built with A2A Protocol, LangGraph, and intelligent agent routing** 🚀 
+**Built with A2A Protocol, LangGraph, and intelligent agent routing**  

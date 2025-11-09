@@ -73,24 +73,24 @@ def print_startup_info(host: str, port: int):
     """Print startup information"""
     plugin_type = get_plugin_type()
     
-    print(f"🚀 Starting {get_agent_name()} on {host}:{port}")
-    print(f"📝 Description: {get_agent_description()}")
-    print(f"🔌 Plugin Type: {plugin_type}")
-    print(f"🎯 Skills: {', '.join([skill.name for skill in get_agent_skills()])}")
+    print(f"Starting {get_agent_name()} on {host}:{port}")
+    print(f"Description: {get_agent_description()}")
+    print(f"Plugin Type: {plugin_type}")
+    print(f"Skills: {', '.join([skill.name for skill in get_agent_skills()])}")
     print()
     
     if plugin_type == "mcp":
         mcp_command = os.getenv("MCP_COMMAND", "Not configured")
-        print(f"🔧 MCP Command: {mcp_command}")
+        print(f"MCP Command: {mcp_command}")
     elif plugin_type == "api":
         api_url = os.getenv("API_BASE_URL", "Not configured")
-        print(f"🌐 API Base URL: {api_url}")
+        print(f"API Base URL: {api_url}")
     elif plugin_type == "custom":
         custom_module = os.getenv("CUSTOM_PLUGIN_MODULE", "Not configured")
-        print(f"⚙️ Custom Plugin: {custom_module}")
+        print(f"Custom Plugin: {custom_module}")
     
     print()
-    print("📚 Available endpoints:")
+    print("Available endpoints:")
     print(f"  • Agent Card: http://{host}:{port}/.well-known/agent.json")
     print(f"  • Health Check: http://{host}:{port}/health")
     print(f"  • Plugin Status: http://{host}:{port}/plugin/status")
@@ -163,8 +163,8 @@ def main(host: str, port: int, log_level: str):
             """Health check endpoint"""
             return {"status": "healthy", "agent": get_agent_name()}
         
-        print("✅ Agent server starting...")
-        print(f"🎯 Access your agent at: http://{host}:{port}")
+        print("Agent server starting...")
+        print(f"Access your agent at: http://{host}:{port}")
         print()
         
         # Run server
@@ -172,8 +172,8 @@ def main(host: str, port: int, log_level: str):
         
     except MissingConfigError as e:
         logger.error(f'Configuration Error: {e}')
-        print(f"\n❌ Configuration Error: {e}")
-        print("\n💡 Quick Setup:")
+        print(f"\nConfiguration Error: {e}")
+        print("\nQuick Setup:")
         print("1. Copy .env.example to .env")
         print("2. Set GOOGLE_API_KEY or OPENAI_API_KEY")
         print("3. Configure TOOL_TYPE (mcp, api, or custom)")
@@ -182,7 +182,7 @@ def main(host: str, port: int, log_level: str):
         
     except Exception as e:
         logger.error(f'Startup Error: {e}')
-        print(f"\n❌ Startup Error: {e}")
+        print(f"\nStartup Error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

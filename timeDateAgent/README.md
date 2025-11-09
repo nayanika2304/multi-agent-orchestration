@@ -2,7 +2,7 @@
 
 Time and date operations agent using **OpenAI GPT-4o**, **MCP (Model Context Protocol)**, and **A2A SDK**. The agent integrates seamlessly with the [intelligent orchestrator system](../orchestrator/README.md) for automatic routing.
 
-## 🕐 Features
+##  Features
 
 - **Current Time**: Get real-time time in any timezone
 - **Timezone Conversion**: Convert time between different timezones
@@ -14,7 +14,7 @@ Time and date operations agent using **OpenAI GPT-4o**, **MCP (Model Context Pro
 - **Orchestrator Integration**: Automatically routed by the intelligent orchestrator
 - **No API Keys Required**: Uses Python's built-in datetime and timezone libraries
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -38,7 +38,7 @@ python -m app --port 8001
 
 The agent will start on `http://localhost:8001`
 
-## 📋 Example Queries
+##  Example Queries
 
 - "What time is it in New York?"
 - "Convert 3:00 PM EST to London time"
@@ -49,7 +49,7 @@ The agent will start on `http://localhost:8001`
 - "Format today's date as ISO 8601"
 - "List all timezones in America"
 
-## 🏗️ Architecture
+##  Architecture
 
 The Time/Date Agent uses an MCP-based architecture:
 
@@ -64,7 +64,7 @@ User Query → Time/Date Agent → MCP Client → Time/Date MCP Server → Pytho
 3. **Agent Executor** (`app/agent_executor.py`): A2A SDK integration
 4. **Entry Point** (`app/__main__.py`): Server startup and configuration
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 
@@ -90,7 +90,7 @@ The Time/Date MCP Server provides:
 5. **format_date**: Format dates in various formats
 6. **list_timezones**: List and search available timezones
 
-## 🎯 Orchestrator Integration
+##  Orchestrator Integration
 
 The agent is automatically discovered by the orchestrator with skills:
 - Current Time
@@ -103,7 +103,7 @@ Example routing:
 - "Convert EST to PST" → Time/Date Agent (high confidence)
 - "How many days until..." → Time/Date Agent (high confidence)
 
-## 📦 Dependencies
+##  Dependencies
 
 - `a2a-sdk`: Agent-to-agent communication
 - `langchain-openai`: OpenAI integration
@@ -113,7 +113,7 @@ Example routing:
 - `pytz`: Timezone support (fallback for older timezones)
 - `zoneinfo`: Built-in timezone support (Python 3.9+)
 
-## 🧪 Testing
+##  Testing
 
 Test the agent directly:
 
@@ -123,7 +123,7 @@ python -m app.agent
 
 Or use the orchestrator to route queries automatically.
 
-## 📝 Notes
+##  Notes
 
 - Uses Python's built-in `datetime` and `zoneinfo` modules
 - Falls back to `pytz` for older timezone definitions
@@ -131,7 +131,7 @@ Or use the orchestrator to route queries automatically.
 - No external API calls required - all operations are local
 - Handles daylight saving time automatically
 
-## 🌍 Supported Timezones
+##  Supported Timezones
 
 The agent supports all timezones from the IANA Time Zone Database, including:
 - America/New_York (EST/EDT)

@@ -2,7 +2,7 @@
 
 A sophisticated currency conversion agent built with [LangGraph](https://langchain-ai.github.io/langgraph/) and exposed through the A2A protocol. It provides real-time exchange rates, currency conversions, and financial data analysis with support for multi-turn dialogue and streaming responses. **The agent integrates seamlessly with the [intelligent orchestrator system](../orchestrator/README.md) for automatic routing**.
 
-## 🚀 **Smart Orchestrator Integration**
+##  **Smart Orchestrator Integration**
 
 The Currency Agent integrates with the intelligent orchestrator for automatic routing:
 
@@ -18,17 +18,17 @@ The Currency Agent integrates with the intelligent orchestrator for automatic ro
 "currency exchange operations" → Currency Agent (100% confidence)
 ```
 
-## 🏗️ System Integration
+## System Integration
 
 This agent integrates seamlessly with the orchestrator system:
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🤖 Smart Orchestrator]
+    A[User Request] --> B[ Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Skill Analysis]
     D --> E{Confidence Scoring}
-    E -->|High Score| F[💰 Currency Agent - Port 8080]
+    E -->|High Score| F[ Currency Agent - Port 8080]
     E -->|Low Score| G[Other Agents]
     
     F --> H[LangGraph ReAct Agent]
@@ -45,27 +45,27 @@ graph TD
     end
 ```
 
-## ✨ Key Features
+##  Key Features
 
-### 💱 Currency Exchange Operations
+###  Currency Exchange Operations
 - **Real-time Exchange Rates**: Live data from Frankfurter API
 - **Currency Conversion**: Support for 30+ major currencies
 - **Historical Data**: Access to historical exchange rates
 - **Multi-currency Support**: Handles all major world currencies
 
-### 🤖 Advanced AI Capabilities  
+###  Advanced AI Capabilities  
 - **Multi-turn Conversations**: Agent can request additional information when needed
 - **Real-time Streaming**: Provides status updates during processing
 - **Conversational Memory**: Maintains context across interactions
 - **A2A Protocol**: Standardized communication interface
 
-### 🔗 Orchestrator Integration
+###  Orchestrator Integration
 - **Automatic Routing**: Intelligent routing based on request content
 - **Skill Discovery**: Capabilities automatically discovered by orchestrator
 - **Confidence Scoring**: High-confidence routing for currency operations
 - **Dynamic Registration**: Can be registered/unregistered at runtime
 
-## 🎯 Supported Operations
+##  Supported Operations
 
 ### Currency Conversion
 - **Basic Conversion**: "Convert 100 USD to EUR"
@@ -78,7 +78,7 @@ graph TD
 - **Rate Comparison**: "Compare USD rates to EUR and GBP"
 - **Financial Information**: "Get financial data for AUD"
 
-## 📊 Agent Card (A2A Integration)
+##  Agent Card (A2A Integration)
 
 ### Orchestrator Recognition
 
@@ -115,7 +115,7 @@ Currency Agent Card:
 "currency exchange operations" → Currency Agent (100%)
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Option 1: Via Orchestrator (Recommended)
 
@@ -164,7 +164,7 @@ uv run -m app
 uv run -m app.test_client
 ```
 
-## 🧪 Testing & Validation
+##  Testing & Validation
 
 ### Comprehensive Test Suite
 
@@ -188,13 +188,13 @@ curl -X POST http://localhost:8001 \
 
 **Currency Operations**:
 ```
-✅ Convert USD to EUR: "100 USD = 85.32 EUR (rate: 0.8532)"
-✅ Exchange Rate Query: "Current USD to EUR rate: 0.8532"
-✅ Historical Data: "EUR to GBP rate on 2024-01-01: 0.8642"
-✅ Multi-currency: "500 CAD = 54,230 JPY (via USD: 373.13)"
+ Convert USD to EUR: "100 USD = 85.32 EUR (rate: 0.8532)"
+ Exchange Rate Query: "Current USD to EUR rate: 0.8532"
+ Historical Data: "EUR to GBP rate on 2024-01-01: 0.8642"
+ Multi-currency: "500 CAD = 54,230 JPY (via USD: 373.13)"
 ```
 
-## 🔧 Technical Architecture
+##  Technical Architecture
 
 ### LangGraph Integration
 
@@ -240,7 +240,7 @@ The agent uses the Frankfurter API for real-time exchange data:
 - **Historical Data**: Daily rates since 1999
 - **Rate Limits**: No authentication required, generous limits
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 ```
@@ -279,7 +279,7 @@ export TOOL_LLM_URL="https://api.openai.com/v1"
 export TOOL_LLM_NAME="gpt-3.5-turbo"
 ```
 
-## 🔧 Configuration Options
+##  Configuration Options
 
 ### LLM Provider Selection
 ```python
@@ -317,7 +317,7 @@ def get_exchange_rate(
     """
 ```
 
-## 📚 API Reference
+##  API Reference
 
 ### CurrencyAgent Class
 ```python
@@ -335,4 +335,4 @@ MXN, SGD, HKD, NOK, ZAR, TRY, BRL, INR, KRW, RUB
 
 ---
 
-**Built with LangGraph, A2A Protocol, and Frankfurter API** 💰
+**Built with LangGraph, A2A Protocol, and Frankfurter API** 

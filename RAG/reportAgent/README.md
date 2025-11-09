@@ -2,7 +2,7 @@
 
 A sophisticated report generation agent built with [LangGraph](https://langchain-ai.github.io/langgraph/) and exposed through the A2A protocol. It generates professional reports and PDF documents from data insights and markdown content, with advanced data visualization capabilities including charts and graphs. The agent supports multi-turn dialogue and streaming responses. **The agent integrates seamlessly with the [intelligent orchestrator system](../../orchestrator/README.md) for automatic routing**.
 
-## 🚀 **Smart Orchestrator Integration**
+## **Smart Orchestrator Integration**
 
 The Report Agent integrates with the intelligent orchestrator for automatic routing:
 
@@ -20,17 +20,17 @@ The Report Agent integrates with the intelligent orchestrator for automatic rout
 "data analysis reporting" → Report Agent (89% confidence)
 ```
 
-## 🏗️ System Integration
+## System Integration
 
 This agent integrates seamlessly with the orchestrator system:
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🤖 Smart Orchestrator]
+    A[User Request] --> B[Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Skill Analysis]
     D --> E{Confidence Scoring}
-    E -->|High Score| F[📊 Report Agent - Port 8003]
+    E -->|High Score| F[Report Agent - Port 8003]
     E -->|Low Score| G[Other Agents]
     
     F --> H[LangGraph ReAct Agent]
@@ -51,34 +51,34 @@ graph TD
     end
 ```
 
-## ✨ Key Features
+## Key Features
 
-### 📄 Report Generation Operations
+### Report Generation Operations
 - **Professional Reports**: Structured documents with title, executive summary, findings, and recommendations
 - **PDF Export**: High-quality PDF generation with proper formatting and embedded charts
 - **Data Processing**: Handles JSON insights and markdown content with context window management
 - **Citation Support**: Inline citations and references
 - **Large Dataset Handling**: Automatic truncation and optimization for datasets exceeding context limits
 
-### 📊 Data Visualization Operations
+### Data Visualization Operations
 - **Chart Generation**: Create bar, line, pie, scatter, and histogram charts
 - **Data Analysis**: Visual analysis of trends, patterns, and statistical data
 - **Automatic Integration**: Charts are automatically embedded in PDF reports
 - **Multiple Formats**: Support for various data input formats (JSON, lists, dictionaries)
 
-### 🤖 Advanced AI Capabilities  
+### Advanced AI Capabilities
 - **Multi-turn Conversations**: Agent can request additional information when needed
 - **Real-time Streaming**: Provides status updates during processing
 - **Conversational Memory**: Maintains context across interactions
 - **A2A Protocol**: Standardized communication interface
 
-### 🔗 Orchestrator Integration
+### Orchestrator Integration
 - **Automatic Routing**: Intelligent routing based on request content
 - **Skill Discovery**: Capabilities automatically discovered by orchestrator
 - **Confidence Scoring**: High-confidence routing for report operations
 - **Dynamic Registration**: Can be registered/unregistered at runtime
 
-## 🎯 Supported Operations
+## Supported Operations
 
 ### Report Generation
 - **Data Reports**: "Generate a report from this JSON data"
@@ -98,7 +98,7 @@ graph TD
 - **Executive Summaries**: "Create an executive summary of these findings"
 - **Recommendation Reports**: "Generate recommendations based on this analysis with supporting visuals"
 
-## 📊 Agent Card (A2A Integration)
+## Agent Card (A2A Integration)
 
 ### Orchestrator Recognition
 
@@ -142,7 +142,7 @@ Report Agent Card:
 "document formatting" → Report Agent (82%)
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option 1: Via Orchestrator (Recommended)
 
@@ -195,7 +195,7 @@ curl -X POST http://localhost:8005 \
   -d '{"method": "message/send", "params": {"message": {"parts": [{"text": "Generate a report from insights: {performance: high} and answer: Great results achieved"}]}}}'
 ```
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Comprehensive Test Suite
 
@@ -219,30 +219,30 @@ curl -X POST http://localhost:8005 \
 
 **Report Operations**:
 ```
-✅ Generate Report: "Professional report created with executive summary and recommendations"
-✅ PDF Export: "Report saved as rag_report.pdf successfully with embedded charts"
-✅ Data Processing: "Analyzed JSON insights and markdown content into structured report"
-✅ Executive Summary: "Executive summary created with key findings highlighted"
+- Generate Report: "Professional report created with executive summary and recommendations"
+- PDF Export: "Report saved as rag_report.pdf successfully with embedded charts"
+- Data Processing: "Analyzed JSON insights and markdown content into structured report"
+- Executive Summary: "Executive summary created with key findings highlighted"
 ```
 
 **Chart Generation Operations**:
 ```
-✅ Bar Chart: "Bar chart created and saved as chart_bar_20241215_143022.png"
-✅ Line Chart: "Line chart showing trends created successfully"
-✅ Pie Chart: "Pie chart with percentages generated from data"
-✅ Scatter Plot: "Scatter plot showing correlations created"
-✅ Histogram: "Histogram analysis of data distribution completed"
+- Bar Chart: "Bar chart created and saved as chart_bar_20241215_143022.png"
+- Line Chart: "Line chart showing trends created successfully"
+- Pie Chart: "Pie chart with percentages generated from data"
+- Scatter Plot: "Scatter plot showing correlations created"
+- Histogram: "Histogram analysis of data distribution completed"
 ```
 
 **Context Window Management**:
 ```
-✅ Large Dataset: "Content optimized for context window (truncated 15% of data)"
-✅ Token Counting: "Processed 45,231 tokens within 120K limit"
-✅ Automatic Retry: "Context exceeded, retrying with reduced content"
-✅ Graceful Handling: "Report generated successfully despite large input size"
+- Large Dataset: "Content optimized for context window (truncated 15% of data)"
+- Token Counting: "Processed 45,231 tokens within 120K limit"
+- Automatic Retry: "Context exceeded, retrying with reduced content"
+- Graceful Handling: "Report generated successfully despite large input size"
 ```
 
-## 🔧 Technical Architecture
+## Technical Architecture
 
 ### LangGraph Integration
 
@@ -313,7 +313,7 @@ MAX_CONTEXT_TOKENS = 120000  # GPT-4o-mini limit with buffer
 - Automatic retry with reduced content on context errors
 ```
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 ```
@@ -354,7 +354,7 @@ export TOOL_LLM_URL="https://your-custom-endpoint.com/v1"
 export TOOL_LLM_NAME="gpt-4o-mini"
 ```
 
-## 🔧 Configuration Options
+## Configuration Options
 
 ### LLM Configuration
 ```python
@@ -395,7 +395,7 @@ def save_pdf(text: str, path: str = "rag_report.pdf") -> str:
     """
 ```
 
-## 📚 API Reference
+## API Reference
 
 ### ReportAgent Class
 ```python
@@ -419,4 +419,4 @@ chart_types = ["bar", "line", "pie", "scatter", "histogram"]
 
 ---
 
-**Built with LangGraph, A2A Protocol, OpenAI, ReportLab, Matplotlib, and Pandas** 📊
+**Built with LangGraph, A2A Protocol, OpenAI, ReportLab, Matplotlib, and Pandas**

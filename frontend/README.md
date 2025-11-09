@@ -4,11 +4,11 @@ A simple React UI for demonstrating the Multi-Agent Orchestrator system.
 
 ## Features
 
-- 🎯 Submit queries to the orchestrator
-- 🤖 See which agent was selected
-- 📊 View confidence scores and reasoning
-- 💡 Example query buttons for quick testing
-- 🎨 Clean, modern UI
+-  Submit queries to the orchestrator
+-  See which agent was selected
+-  View confidence scores and reasoning
+-  Example query buttons for quick testing
+-  Clean, modern UI
 
 ## Setup
 

@@ -2,7 +2,7 @@
 
 Advanced mathematical assistant for calculations, equation solving, calculus, statistics, and matrix operations using **Google AI (Gemini 1.5 Flash)**, **MCP (Model Context Protocol)**, and **A2A SDK**. **The agent integrates seamlessly with the [intelligent orchestrator system](../orchestrator/README.md) for automatic routing**.
 
-## 🚀 **Smart Orchestrator Integration**
+##  **Smart Orchestrator Integration**
 
 The Math Agent integrates with the intelligent orchestrator for automatic routing:
 
@@ -20,17 +20,17 @@ The Math Agent integrates with the intelligent orchestrator for automatic routin
 "calculus operations" → Math Agent (100% confidence)
 ```
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 The Math Agent uses a sophisticated **MCP-based architecture** that separates mathematical computation from language understanding:
 
 ```mermaid
 graph TD
-    A[User Request] --> B[🤖 Smart Orchestrator]
+    A[User Request] --> B[ Smart Orchestrator]
     B --> C[A2A Card Resolver]
     C --> D[Skill Analysis]
     D --> E{Confidence Scoring}
-    E -->|High Score| F[🧮 Math Agent - Port 8081]
+    E -->|High Score| F[ Math Agent - Port 8081]
     E -->|Low Score| G[Other Agents]
     
     F --> H[LangGraph ReAct Agent]
@@ -56,39 +56,39 @@ graph TD
     end
 ```
 
-## ✨ Features
+##  Features
 
-### 🧮 Arithmetic Calculations
+###  Arithmetic Calculations
 - **Basic Operations**: Addition, subtraction, multiplication, division
 - **Advanced Functions**: Trigonometric, logarithmic, exponential
 - **Mathematical Constants**: π, e, and other constants
 - **Complex Numbers**: Support for complex arithmetic
 
-### 📐 Equation Solving
+###  Equation Solving
 - **Linear Equations**: `2x + 5 = 11`
 - **Quadratic Equations**: `x^2 - 4 = 0`
 - **Polynomial Equations**: Any degree polynomial equations
 - **Systems of Equations**: Multiple equation systems
 
-### 📊 Calculus Operations
+###  Calculus Operations
 - **Derivatives**: Find derivatives of mathematical functions
 - **Integrals**: Calculate indefinite and definite integrals
 - **Symbolic Mathematics**: Full symbolic computation support
 - **Limits**: Calculate mathematical limits
 
-### 🔢 Matrix Operations
+###  Matrix Operations
 - **Matrix Arithmetic**: Addition, subtraction, multiplication
 - **Matrix Properties**: Inverse, transpose, determinant
 - **Linear Algebra**: Eigenvalues, eigenvectors
 - **Support for Any Size**: No matrix size limitations
 
-### 📈 Statistics Analysis
+###  Statistics Analysis
 - **Descriptive Statistics**: Mean, median, mode, range
 - **Variability Measures**: Standard deviation, variance
 - **Data Analysis**: Comprehensive numerical dataset analysis
 - **Probability Distributions**: Common statistical distributions
 
-## 🎯 Supported Operations
+##  Supported Operations
 
 ### Mathematical Calculations
 - **Basic Math**: "What is 2+3?", "Calculate 15 * 24"
@@ -102,7 +102,7 @@ graph TD
 - **Mathematical Functions**: "Graph the function y = x^2 + 2x - 3"
 - **Numerical Analysis**: "Find numerical solutions to differential equations"
 
-## 📊 Agent Card (A2A Integration)
+##  Agent Card (A2A Integration)
 
 ### Orchestrator Recognition
 
@@ -140,7 +140,7 @@ Math Agent Card:
 "calculus operations" → Math Agent (100%)
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Option 1: Via Orchestrator (Recommended)
 
@@ -191,7 +191,7 @@ uv run -m app
 # Test directly
 uv run -m app.test_client
 ```
-## 🧪 Testing & Validation
+##  Testing & Validation
 
 ### Comprehensive Test Suite
 
@@ -215,14 +215,14 @@ curl -X POST http://localhost:8081 \
 
 **Mathematical Operations**:
 ```
-✅ Basic Arithmetic: "2 + 3 = 5"
-✅ Equation Solving: "x^2 - 4 = 0 has solutions x = 2, x = -2"
-✅ Calculus: "The derivative of x^2 + 3x is 2x + 3"
-✅ Matrix Operations: "Determinant of [[1,2],[3,4]] = -2"
-✅ Statistics: "Mean of [1,2,3,4,5] = 3.0"
+ Basic Arithmetic: "2 + 3 = 5"
+ Equation Solving: "x^2 - 4 = 0 has solutions x = 2, x = -2"
+ Calculus: "The derivative of x^2 + 3x is 2x + 3"
+ Matrix Operations: "Determinant of [[1,2],[3,4]] = -2"
+ Statistics: "Mean of [1,2,3,4,5] = 3.0"
 ```
 
-## 🔧 Technical Architecture
+##  Technical Architecture
 
 ### MCP Integration
 
@@ -274,7 +274,7 @@ The custom MCP server provides mathematical capabilities:
 - **matrix_operations**: Linear algebra operations
 - **statistics_calculator**: Statistical analysis
 
-## 🛠️ Development
+##  Development
 
 ### Project Structure
 ```
@@ -312,14 +312,14 @@ export API_KEY="your-openai-api-key"
 export OPENAI_API_BASE="https://api.openai.com/v1"
 ```
 
-## 🔧 Configuration Options
+##  Configuration Options
 
 ### LLM Provider Selection
 ```python
 def _initialize_model(self):
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        print("⚠️  GOOGLE_API_KEY not set. Using default configuration.")
+        print("  GOOGLE_API_KEY not set. Using default configuration.")
         self.model = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
             temperature=0
@@ -357,7 +357,7 @@ def get_capabilities(self) -> List[str]:
         "Mathematical function plotting and visualization"
     ]
 ```
-## 📚 API Reference
+##  API Reference
 
 ### MathAgent Class
 ```python
@@ -380,7 +380,7 @@ Logarithmic: ln, log, log10, log2, exp
 Advanced: derivative, integral, solve, matrix operations, statistics
 ```
 
-## 🧮 Mathematical Examples
+##  Mathematical Examples
 
 ### Arithmetic Operations
 ```bash
@@ -412,4 +412,4 @@ Advanced: derivative, integral, solve, matrix operations, statistics
 
 ---
 
-**Built with LangGraph, MCP Protocol, and SymPy** 🧮 
+**Built with LangGraph, MCP Protocol, and SymPy**  

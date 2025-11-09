@@ -65,14 +65,14 @@ class RAGReportWorkflow:
     
     async def rag_research_step(self, research_question: str) -> Dict[str, Any]:
         """Step 1: Use RAG Agent to research and analyze data"""
-        print(f"🔍 Step 1: RAG Research")
+        print(f" Step 1: RAG Research")
         print(f"Question: {research_question}")
         print("Sending to orchestrator for intelligent routing...")
         
         result = await self.send_request(research_question)
         
         if result["success"]:
-            print("✅ RAG research completed successfully")
+            print(" RAG research completed successfully")
             
             # Extract and structure the response
             response_data = result["data"]
@@ -143,12 +143,12 @@ This analysis is based on {sample_insights['data_sources']} primary data sources
                 "raw_response": response_data
             }
         else:
-            print(f"❌ RAG research failed: {result['error']}")
+            print(f" RAG research failed: {result['error']}")
             return {"success": False, "error": result["error"]}
     
     async def report_generation_step(self, insights: Dict, analysis: str) -> Dict[str, Any]:
         """Step 2: Use Report Agent to generate professional report"""
-        print(f"\n📄 Step 2: Professional Report Generation")
+        print(f"\n Step 2: Professional Report Generation")
         print("Creating comprehensive report with visualizations...")
         
         # Prepare data for charting
@@ -198,19 +198,19 @@ The report should be suitable for executive presentation and include all visual 
         result = await self.send_request(report_request)
         
         if result["success"]:
-            print("✅ Professional report generated successfully")
+            print(" Professional report generated successfully")
             return {
                 "success": True,
                 "report_response": result["data"],
                 "chart_data": chart_data
             }
         else:
-            print(f"❌ Report generation failed: {result['error']}")
+            print(f" Report generation failed: {result['error']}")
             return {"success": False, "error": result["error"]}
     
     async def run_complete_workflow(self, research_question: str) -> Dict[str, Any]:
         """Run the complete RAG-to-Report workflow"""
-        print("🚀 Starting Complete RAG-Report Workflow")
+        print(" Starting Complete RAG-Report Workflow")
         print("=" * 60)
         print(f"Research Question: {research_question}")
         print(f"Session ID: {self.session_id}")
@@ -246,11 +246,11 @@ The report should be suitable for executive presentation and include all visual 
         workflow_results["status"] = "completed"
         workflow_results["end_time"] = datetime.now().isoformat()
         
-        print("\n🎉 Complete workflow finished successfully!")
-        print("\n📊 Workflow Summary:")
-        print(f"✅ RAG Research: Data retrieved and analyzed")
-        print(f"✅ Report Generation: Professional report with charts created")
-        print(f"📁 Session ID: {self.session_id}")
+        print("\n Complete workflow finished successfully!")
+        print("\n Workflow Summary:")
+        print(f" RAG Research: Data retrieved and analyzed")
+        print(f" Report Generation: Professional report with charts created")
+        print(f" Session ID: {self.session_id}")
         
         return workflow_results
 
@@ -260,7 +260,7 @@ async def run_examples():
     workflow = RAGReportWorkflow()
     
     # Example 1: Market Research
-    print("📈 Example 1: AI Market Research → Professional Report")
+    print(" Example 1: AI Market Research → Professional Report")
     result1 = await workflow.run_complete_workflow(
         "What are the current trends and growth projections for the artificial intelligence market?"
     )
@@ -269,7 +269,7 @@ async def run_examples():
     
     # Example 2: Technology Analysis  
     print("\n" + "="*80)
-    print("🔬 Example 2: Technology Analysis → Research Report")
+    print(" Example 2: Technology Analysis → Research Report")
     workflow2 = RAGReportWorkflow()
     result2 = await workflow2.run_complete_workflow(
         "Analyze the adoption of machine learning in enterprise environments and provide strategic recommendations"
@@ -279,7 +279,7 @@ async def run_examples():
     
     # Example 3: Quick Data Visualization
     print("\n" + "="*80) 
-    print("📊 Example 3: Data Analysis → Visualization Report")
+    print(" Example 3: Data Analysis → Visualization Report")
     workflow3 = RAGReportWorkflow()
     result3 = await workflow3.run_complete_workflow(
         "Create charts and analysis for quarterly tech industry performance data"
@@ -287,7 +287,7 @@ async def run_examples():
     
     # Summary
     print("\n" + "="*80)
-    print("🎯 WORKFLOW EXAMPLES COMPLETED")
+    print(" WORKFLOW EXAMPLES COMPLETED")
     print("="*80)
     
     examples = [
@@ -297,7 +297,7 @@ async def run_examples():
     ]
     
     for name, status in examples:
-        status_icon = "✅" if status == "completed" else "❌"
+        status_icon = "" if status == "completed" else ""
         print(f"{status_icon} {name}: {status}")
     
     return [result1, result2, result3]
@@ -305,7 +305,7 @@ async def run_examples():
 # Test individual components
 async def test_system_connectivity():
     """Test if all system components are reachable"""
-    print("🔍 Testing System Connectivity")
+    print(" Testing System Connectivity")
     print("-" * 40)
     
     workflow = RAGReportWorkflow()
@@ -315,11 +315,11 @@ async def test_system_connectivity():
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{workflow.orchestrator_url}/agent_card")
             if response.status_code == 200:
-                print("✅ Orchestrator: Connected")
+                print(" Orchestrator: Connected")
             else:
-                print(f"⚠️  Orchestrator: HTTP {response.status_code}")
+                print(f"Orchestrator: HTTP {response.status_code}")
     except Exception as e:
-        print(f"❌ Orchestrator: {e}")
+        print(f" Orchestrator: {e}")
     
     # Test agent discovery
     try:
@@ -327,17 +327,17 @@ async def test_system_connectivity():
             response = await client.get(f"{workflow.orchestrator_url}/agents")
             if response.status_code == 200:
                 agents = response.json()
-                print(f"✅ Agent Discovery: Found {len(agents)} agents")
+                print(f" Agent Discovery: Found {len(agents)} agents")
                 for agent in agents:
                     print(f"   - {agent.get('name', 'Unknown')}")
             else:
-                print(f"⚠️  Agent Discovery: HTTP {response.status_code}")
+                print(f"Agent Discovery: HTTP {response.status_code}")
     except Exception as e:
-        print(f"❌ Agent Discovery: {e}")
+        print(f" Agent Discovery: {e}")
 
 async def main():
     """Main demonstration function"""
-    print("🤖 RAG-Report Workflow Demonstration")
+    print(" RAG-Report Workflow Demonstration")
     print("Connecting RAG Agent + Report Agent through Orchestrator")
     print("=" * 70)
     
@@ -345,29 +345,29 @@ async def main():
     await test_system_connectivity()
     
     print("\n" + "=" * 70)
-    print("🎬 RUNNING WORKFLOW EXAMPLES")
+    print(" RUNNING WORKFLOW EXAMPLES")
     print("=" * 70)
     
     # Run workflow examples
     results = await run_examples()
     
     # Show final summary
-    print(f"\n📋 Final Summary:")
+    print(f"\n Final Summary:")
     print(f"Total workflows executed: {len(results)}")
     successful = sum(1 for r in results if r["status"] == "completed")
     print(f"Successful completions: {successful}/{len(results)}")
     
     if successful > 0:
-        print("\n🎉 RAG-Report integration is working correctly!")
-        print("🔗 The orchestrator successfully routes queries to the appropriate agents")
-        print("📊 Data flows from RAG Agent research to Report Agent visualization")
+        print("\n RAG-Report integration is working correctly!")
+        print(" The orchestrator successfully routes queries to the appropriate agents")
+        print(" Data flows from RAG Agent research to Report Agent visualization")
     else:
-        print("\n⚠️  Some workflows failed. Check system status and configuration.")
+        print("\nSome workflows failed. Check system status and configuration.")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n👋 Workflow demonstration stopped by user")
+        print("\n\n Workflow demonstration stopped by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")

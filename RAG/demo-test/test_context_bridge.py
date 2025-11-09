@@ -59,72 +59,72 @@ class ContextBridgeTester:
     
     async def test_basic_connectivity(self) -> bool:
         """Test basic connectivity to orchestrator"""
-        print("🔗 Testing basic connectivity...")
+        print(" Testing basic connectivity...")
         
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{self.orchestrator_url}/agent_card")
                 if response.status_code == 200:
-                    print("✅ Orchestrator is responding")
+                    print(" Orchestrator is responding")
                     return True
                 else:
-                    print(f"❌ Orchestrator responded with status {response.status_code}")
+                    print(f" Orchestrator responded with status {response.status_code}")
                     return False
         except Exception as e:
-            print(f"❌ Failed to connect to orchestrator: {e}")
+            print(f" Failed to connect to orchestrator: {e}")
             return False
     
     async def test_context_bridge_scenario(self):
         """Test the main context bridge scenario"""
-        print("\n🌉 TESTING CONTEXT BRIDGE SCENARIO")
+        print("\n TESTING CONTEXT BRIDGE SCENARIO")
         print("=" * 60)
         
         # Scenario 1: Ask ragAgent about NYC winter
-        print("📍 STEP 1: Query ragAgent about NYC winter")
+        print(" STEP 1: Query ragAgent about NYC winter")
         print("-" * 40)
         
         winter_query = "How was the winter in New York?"
-        print(f"🔍 Query: '{winter_query}'")
+        print(f" Query: '{winter_query}'")
         
         result1 = await self.send_query(winter_query)
         if result1["success"]:
-            print("✅ Query sent successfully")
-            print("📊 Expected: Should route to ragAgent")
+            print(" Query sent successfully")
+            print(" Expected: Should route to ragAgent")
             # Note: In real scenario, this would search weather data
-            print("📝 Response received (check orchestrator logs for routing)")
+            print(" Response received (check orchestrator logs for routing)")
         else:
-            print(f"❌ Query failed: {result1['error']}")
+            print(f" Query failed: {result1['error']}")
             return
         
         # Wait a moment for processing
         await asyncio.sleep(2)
         
         # Scenario 2: Ask reportAgent to generate report using "it"
-        print(f"\n📍 STEP 2: Query reportAgent with pronoun reference")
+        print(f"\n STEP 2: Query reportAgent with pronoun reference")
         print("-" * 40)
         
         report_query = "Generate a report on it"
-        print(f"📊 Query: '{report_query}'")
-        print("🔗 Expected: Context bridge should resolve 'it' → 'NYC winter analysis'")
+        print(f" Query: '{report_query}'")
+        print(" Expected: Context bridge should resolve 'it' → 'NYC winter analysis'")
         
         result2 = await self.send_query(report_query)
         if result2["success"]:
-            print("✅ Query sent successfully")
-            print("📊 Expected: Should route to reportAgent with enriched context")
-            print("🎯 Context bridge should have:")
+            print(" Query sent successfully")
+            print(" Expected: Should route to reportAgent with enriched context")
+            print(" Context bridge should have:")
             print("   • Detected pronoun 'it' in query")
             print("   • Enriched query with previous NYC winter context")
             print("   • Routed to reportAgent with full context")
         else:
-            print(f"❌ Query failed: {result2['error']}")
+            print(f" Query failed: {result2['error']}")
             return
         
-        print("\n✨ CONTEXT BRIDGE TEST COMPLETED")
+        print("\n CONTEXT BRIDGE TEST COMPLETED")
         print("Check orchestrator logs for context enrichment messages!")
     
     async def test_multiple_queries(self):
         """Test multiple context-dependent queries"""
-        print("\n🔄 TESTING MULTIPLE CONTEXT QUERIES")
+        print("\n TESTING MULTIPLE CONTEXT QUERIES")
         print("=" * 60)
         
         queries = [
@@ -135,27 +135,27 @@ class ContextBridgeTester:
         ]
         
         for i, (query, expected_routing) in enumerate(queries, 1):
-            print(f"\n📍 Query {i}: '{query}'")
-            print(f"🎯 Expected: {expected_routing}")
+            print(f"\n Query {i}: '{query}'")
+            print(f" Expected: {expected_routing}")
             
             result = await self.send_query(query)
             if result["success"]:
-                print("✅ Query sent successfully")
+                print(" Query sent successfully")
             else:
-                print(f"❌ Query failed: {result['error']}")
+                print(f" Query failed: {result['error']}")
             
             await asyncio.sleep(1)  # Brief pause between queries
     
     async def demonstrate_without_context_bridge(self):
         """Demonstrate what would happen without context bridge"""
-        print("\n🚫 WITHOUT CONTEXT BRIDGE (Previous Behavior)")
+        print("\n WITHOUT CONTEXT BRIDGE (Previous Behavior)")
         print("=" * 60)
         
         print("Scenario: User asks ragAgent, then reportAgent")
         print("1. 'How was winter in NYC?' → ragAgent responds")
         print("2. 'Generate report on it' → reportAgent gets confused")
         print()
-        print("❌ Problems:")
+        print(" Problems:")
         print("   • reportAgent doesn't know what 'it' refers to")
         print("   • No cross-agent context sharing")
         print("   • User has to repeat information")
@@ -163,21 +163,21 @@ class ContextBridgeTester:
     
     async def demonstrate_with_context_bridge(self):
         """Demonstrate the improved behavior with context bridge"""
-        print("\n✅ WITH CONTEXT BRIDGE (New Behavior)")
+        print("\n WITH CONTEXT BRIDGE (New Behavior)")
         print("=" * 60)
         
         print("Scenario: User asks ragAgent, then reportAgent")
         print("1. 'How was winter in NYC?' → ragAgent responds")
         print("2. 'Generate report on it' → Context bridge enriches query")
         print()
-        print("🌉 Context Bridge Process:")
+        print(" Context Bridge Process:")
         print("   1. Detects pronoun 'it' in query")
         print("   2. Looks up conversation history")
         print("   3. Finds previous NYC winter analysis")
         print("   4. Enriches query: 'Generate report on NYC winter analysis'")
         print("   5. Routes to reportAgent with full context")
         print()
-        print("✅ Benefits:")
+        print(" Benefits:")
         print("   • Seamless conversation flow")
         print("   • Intelligent pronoun resolution")
         print("   • Cross-agent context sharing")
@@ -185,14 +185,14 @@ class ContextBridgeTester:
 
 async def main():
     """Run the context bridge tests"""
-    print("🌉 ORCHESTRATOR CONTEXT BRIDGE TESTER")
+    print(" ORCHESTRATOR CONTEXT BRIDGE TESTER")
     print("=" * 60)
     
     tester = ContextBridgeTester()
     
     # Test basic connectivity
     if not await tester.test_basic_connectivity():
-        print("\n❌ Cannot connect to orchestrator. Please ensure:")
+        print("\n Cannot connect to orchestrator. Please ensure:")
         print("   1. Orchestrator is running on localhost:8000")
         print("   2. ragAgent is running on localhost:8004")
         print("   3. reportAgent is running on localhost:8003")
@@ -206,14 +206,14 @@ async def main():
     await tester.test_context_bridge_scenario()
     await tester.test_multiple_queries()
     
-    print("\n🎉 TESTING COMPLETED!")
-    print("📋 Summary:")
+    print("\n TESTING COMPLETED!")
+    print(" Summary:")
     print("   • Context bridge enables cross-agent conversation continuity")
     print("   • Pronoun resolution makes conversations more natural")
     print("   • Session management maintains context across agent switches")
     print("   • Users can have seamless multi-agent conversations")
     
-    print("\n💡 Next Steps:")
+    print("\n Next Steps:")
     print("   • Check orchestrator logs for context enrichment messages")
     print("   • Try the improved conversation flow with real agents")
     print("   • Experiment with complex multi-turn conversations")

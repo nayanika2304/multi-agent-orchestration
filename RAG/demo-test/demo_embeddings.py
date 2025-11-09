@@ -111,7 +111,7 @@ def demo_search_scenarios():
 
 def main():
     """Demo the embedding process"""
-    print("🎯 Vector Embeddings Demo for Weather Data")
+    print(" Vector Embeddings Demo for Weather Data")
     print("=" * 50)
     
     # Read a few sample records
@@ -121,61 +121,61 @@ def main():
             reader = csv.DictReader(file)
             sample_records = [next(reader) for _ in range(3)]
     except:
-        print("❌ Could not read weather_data.csv")
+        print(" Could not read weather_data.csv")
         return
     
-    print(f"📝 Processing {len(sample_records)} sample weather records...\n")
+    print(f" Processing {len(sample_records)} sample weather records...\n")
     
     # Show how records get converted to embeddable documents
     for i, record in enumerate(sample_records, 1):
-        print(f"🌤️  SAMPLE RECORD #{i}")
+        print(f"  SAMPLE RECORD #{i}")
         print("-" * 30)
         
         # Show raw CSV data
-        print("📊 Raw CSV Data:")
+        print(" Raw CSV Data:")
         for key, value in record.items():
             print(f"  {key}: {value}")
         
         # Show converted document
         document = create_weather_document_demo(record, i)
-        print(f"\n📝 Natural Language Document (gets embedded):")
+        print(f"\n Natural Language Document (gets embedded):")
         print(f"\"\"\"")
         print(document["content"])
         print(f"\"\"\"")
         
-        print(f"\n🏷️  Metadata (stored with vector):")
+        print(f"\n  Metadata (stored with vector):")
         print(json.dumps(document["metadata"], indent=2))
         
-        print(f"\n🔮 {document['embedding_note']}")
+        print(f"\n {document['embedding_note']}")
         print("\n" + "="*60 + "\n")
     
     # Show search scenarios
-    print("🔍 SEMANTIC SEARCH CAPABILITIES")
+    print(" SEMANTIC SEARCH CAPABILITIES")
     print("=" * 50)
     
     scenarios = demo_search_scenarios()
     for i, scenario in enumerate(scenarios, 1):
-        print(f"🎯 Search Scenario #{i}")
+        print(f" Search Scenario #{i}")
         print(f"User Query: \"{scenario['user_query']}\"")
         print(f"How it works: {scenario['how_it_works']}")
         print(f"Semantic matches: {', '.join(scenario['semantic_matches'])}")
         print()
     
-    print("💡 EMBEDDING PROCESS SUMMARY")
+    print(" EMBEDDING PROCESS SUMMARY")
     print("=" * 50)
-    print("1. 📝 Raw weather data → Natural language descriptions")
-    print("2. 🔮 OpenAI text-embedding-3-small → 1536-dimensional vectors")
-    print("3. 💾 Chroma DB → Stores vectors + metadata for fast similarity search")
-    print("4. 🔍 User queries → Vector similarity → Relevant weather records")
-    print("5. 🤖 RAG Agent → Generates natural language responses")
+    print("1.  Raw weather data → Natural language descriptions")
+    print("2.  OpenAI text-embedding-3-small → 1536-dimensional vectors")
+    print("3.  Chroma DB → Stores vectors + metadata for fast similarity search")
+    print("4.  User queries → Vector similarity → Relevant weather records")
+    print("5.  RAG Agent → Generates natural language responses")
     
-    print(f"\n📊 SCALE:")
+    print(f"\n SCALE:")
     print(f"• Your CSV: 1,000,000 weather records")
     print(f"• Embeddings: 1,000,000 vectors (1536 dimensions each)")
     print(f"• Storage: ~6GB of vector data in Chroma DB")
     print(f"• Search: Sub-second semantic similarity queries")
     
-    print(f"\n🔄 NEXT STEPS:")
+    print(f"\n NEXT STEPS:")
     print(f"• Wait for OpenAI quota to reset (24 hours)")
     print(f"• Or upgrade OpenAI plan for higher limits")
     print(f"• Run import script when quota available")
