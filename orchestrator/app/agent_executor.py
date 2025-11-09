@@ -149,12 +149,12 @@ class OrchestratorAgentExecutor(AgentExecutor):
                     logger.info(f"Total registered agents: {len(self.orchestrator.agents)}")
                     logger.info("=" * 80)
                     
-                    response_text = f"✅ {result.get('message')}\n"
+                    response_text = f"SUCCESS: {result.get('message')}\n"
                     response_text += f"Agent ID: {result.get('agent_id')}\n"
                     response_text += f"Agent Name: {result.get('agent_name')}\n"
                     response_text += f"Total agents: {len(self.orchestrator.agents)}"
                 else:
-                    response_text = f"❌ Registration failed: {result.get('error')}"
+                    response_text = f"ERROR: Registration failed: {result.get('error')}"
             
             # Check if this is an unregistration request
             elif query.startswith("UNREGISTER_AGENT:"):
@@ -177,7 +177,7 @@ class OrchestratorAgentExecutor(AgentExecutor):
                 if result.get("success", False):
                     # Log all registered agent details after successful unregistration
                     logger.info("=" * 80)
-                    logger.info("🗑️  AGENT UNREGISTRATION SUCCESSFUL - REMAINING REGISTERED AGENTS:")
+                    logger.info("AGENT UNREGISTRATION SUCCESSFUL - REMAINING REGISTERED AGENTS:")
                     logger.info("=" * 80)
                     
                     if self.orchestrator.agents:
@@ -193,11 +193,11 @@ class OrchestratorAgentExecutor(AgentExecutor):
                     logger.info(f"Total remaining agents: {len(self.orchestrator.agents)}")
                     logger.info("=" * 80)
                     
-                    response_text = f"✅ {result.get('message')}\n"
+                    response_text = f"SUCCESS: {result.get('message')}\n"
                     response_text += f"Agent ID: {result.get('agent_id')}\n"
                     response_text += f"Remaining agents: {len(self.orchestrator.agents)}"
                 else:
-                    response_text = f"❌ Unregistration failed: {result.get('error')}"
+                    response_text = f"ERROR: Unregistration failed: {result.get('error')}"
                 
             else:
                 # Process the request through the orchestrator
@@ -227,16 +227,16 @@ class OrchestratorAgentExecutor(AgentExecutor):
                 # Format the response
                 if result.get("success", False):
                     if result.get("selected_agent_id"):
-                        response_text = f"✅ Routed to {result.get('selected_agent_name', 'Unknown Agent')}\n"
+                        response_text = f"Routed to {result.get('selected_agent_name', 'Unknown Agent')}\n"
                         response_text += f"Confidence: {result.get('confidence', 0):.2f}\n"
                         response_text += f"Reasoning: {result.get('reasoning', 'No reasoning provided')}\n"
                         response_text += f"Response: {result.get('response', 'No response')}"
                     else:
-                        response_text = f"⚠️ No suitable agent found for this request\n"
+                        response_text = f"WARNING: No suitable agent found for this request\n"
                         response_text += f"Reason: {result.get('reasoning', 'No reasoning provided')}\n"
                         response_text += f"Available agents: {', '.join([a['name'] for a in self.orchestrator.get_available_agents()])}"
                 else:
-                    response_text = f"❌ Error: {result.get('error', 'Unknown error')}"
+                    response_text = f"ERROR: {result.get('error', 'Unknown error')}"
                     logger.error(f"Orchestrator error: {result.get('error', 'Unknown error')}")
             
             # Complete the task

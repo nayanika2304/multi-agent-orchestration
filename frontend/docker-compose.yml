@@ -1,0 +1,26 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DOCKER=true
+    command: npm run dev -- --host
+    # Use host.docker.internal to access orchestrator on host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Uncomment and adjust if orchestrator is also in Docker:
+    # depends_on:
+    #   - orchestrator
+    # networks:
+    #   - app-network
+
+# Uncomment if orchestrator is also in Docker:
+# networks:
+#   app-network:
+#     driver: bridge
+

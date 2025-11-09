@@ -1,10 +1,22 @@
 from collections.abc import AsyncIterable
 from typing import Any, Dict, Literal
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+
+# LangSmith tracing
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGSMITH_API_KEY", ""))
+os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGSMITH_PROJECT", "03892bba-bf1e-4c69-82d9-1058208e56ae"))
 
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
@@ -16,7 +28,6 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 import matplotlib.pyplot as plt
 import pandas as pd
 import json
-import os
 from datetime import datetime
 
 
@@ -40,8 +51,9 @@ def generate_report_text(insights_json: str, answer_markdown: str) -> str:
     MODEL = "gpt-4o-mini"
     client = OpenAI()
     
-    # GPT-4o-mini has 128K context window, leave room for response (~4K tokens)
-    MAX_CONTEXT_TOKENS = 120000
+    # GPT-4o-mini has 128K context window, but use smaller for faster responses
+    # Optimize: Use 16K tokens max for input to ensure faster processing
+    MAX_CONTEXT_TOKENS = 16000  # Reduced from 120000 for faster processing
     
     SYSTEM_REPORT = """You are a Report Generator Agent.
                         Produce a professional report with:
@@ -108,11 +120,13 @@ def generate_report_text(insights_json: str, answer_markdown: str) -> str:
     ]
     
     try:
+        # Optimize: Use streaming=False explicitly and reduce max_tokens for faster response
         resp = client.chat.completions.create(
             model=MODEL, 
             messages=msgs,
-            max_tokens=4000,  # Limit response length
-            temperature=0.1   # More consistent outputs
+            max_tokens=2000,  # Reduced from 4000 for faster generation
+            temperature=0.1,
+            stream=False  # Explicitly disable streaming for faster response
         )
         return resp.choices[0].message.content
     except Exception as e:
@@ -124,8 +138,9 @@ def generate_report_text(insights_json: str, answer_markdown: str) -> str:
                 resp = client.chat.completions.create(
                     model=MODEL, 
                     messages=msgs,
-                    max_tokens=4000,
-                    temperature=0.1
+                    max_tokens=2000,  # Reduced from 4000 for faster generation
+                    temperature=0.1,
+                    stream=False
                 )
                 return resp.choices[0].message.content
             except Exception as retry_e:
@@ -156,9 +171,13 @@ def generate_chart(data_json: str, chart_type: str = "bar", title: str = "Data A
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         chart_path = f"chart_{chart_type}_{timestamp}.png"
         
+        # Optimize: Use non-interactive backend for faster chart generation
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        
         # Set up the plot style
         plt.style.use('default')
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(8, 5))  # Reduced size for faster rendering
         
         if chart_type.lower() == "bar":
             if isinstance(data, dict):
@@ -282,16 +301,12 @@ class ReportAgent:
     )
 
     def __init__(self):
-        model_source = os.getenv("model_source", "google")
-        if model_source == "google":
-            self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
-        else:
-            self.model = ChatOpenAI(
-                 model=os.getenv("TOOL_LLM_NAME"),
-                 openai_api_key=os.getenv("API_KEY", "EMPTY"),
-                 openai_api_base=os.getenv("TOOL_LLM_URL"),
-                 temperature=0
-             )
+        self.model = ChatOpenAI(
+            model=os.getenv("TOOL_LLM_NAME", "gpt-4o-mini"),
+            openai_api_key=os.getenv("OPENAI_API_KEY", os.getenv("API_KEY", "")),
+            openai_api_base=os.getenv("TOOL_LLM_URL", None),
+            temperature=0
+        )
         self.tools = [generate_report_text, generate_chart, save_pdf]
 
         self.graph = create_react_agent(

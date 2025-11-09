@@ -1,17 +1,27 @@
 from collections.abc import AsyncIterable
+from pathlib import Path
 from typing import Any, Literal
 
 import httpx
 import os
 
+from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel
 
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+
+# LangSmith tracing
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGSMITH_API_KEY", ""))
+os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGSMITH_PROJECT", "03892bba-bf1e-4c69-82d9-1058208e56ae"))
 
 memory = MemorySaver()
 
@@ -59,7 +69,7 @@ class ResponseFormat(BaseModel):
 
 
 class CurrencyAgent:
-    """CurrencyAgent - a specialized assistant for currency convesions."""
+    """CurrencyAgent - a specialized assistant for currency conversions."""
 
     SYSTEM_INSTRUCTION = (
         'You are a specialized assistant for currency conversions. '
@@ -73,16 +83,11 @@ class CurrencyAgent:
     )
 
     def __init__(self):
-        model_source = os.getenv("model_source", "google")
-        if model_source == "google":
-            self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
-        else:
-            self.model = ChatOpenAI(
-                 model=os.getenv("TOOL_LLM_NAME"),
-                 openai_api_key=os.getenv("API_KEY", "EMPTY"),
-                 openai_api_base=os.getenv("TOOL_LLM_URL"),
-                 temperature=0
-             )
+        self.model = ChatOpenAI(
+            model="gpt-4o",
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            temperature=1  # Use default temperature (some models don't support 0)
+        )
         self.tools = [get_exchange_rate]
 
         self.graph = create_react_agent(

@@ -22,6 +22,18 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict
 
+# Load .env file from project root
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (3 levels up from shared/)
+    project_root = Path(__file__).parent.parent.parent
+    env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        logging.info(f"Loaded .env from {env_path}")
+except ImportError:
+    pass  # dotenv not available, will use system env vars
+
 # Add the RAG directory to Python path for shared modules  
 current_dir = Path(__file__).parent
 rag_dir = current_dir.parent
@@ -44,44 +56,47 @@ class WeatherDataImporter:
         self.collection = collection
         
         # Initialize vector store with same config as RAG agent
-        self.vector_store = VectorStore(path=chroma_path, collection=collection)
+        chroma_path_str = str(chroma_path) if isinstance(chroma_path, Path) else chroma_path
+        self.vector_store = VectorStore(path=chroma_path_str, collection=collection)
         
     def validate_environment(self) -> bool:
         """Check if required environment variables and files exist"""
         # Check OpenAI API key
         if not os.getenv("OPENAI_API_KEY"):
-            logger.error("❌ OPENAI_API_KEY environment variable not set")
-            logger.info("💡 Set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
+            logger.error("OPENAI_API_KEY environment variable not set")
+            logger.info("Set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
             return False
         
-        # Check CSV file exists
-        if not self.csv_path.exists():
-            logger.error(f"❌ CSV file not found: {self.csv_path}")
+        # Check CSV file exists (convert to Path if string)
+        csv_path = Path(self.csv_path) if isinstance(self.csv_path, str) else self.csv_path
+        if not csv_path.exists():
+            logger.error(f"CSV file not found: {csv_path}")
             return False
         
-        logger.info("✅ Environment validation passed")
+        logger.info("Environment validation passed")
         return True
     
     def read_weather_data(self) -> List[Dict]:
         """Read and parse the weather CSV file"""
-        logger.info(f"📖 Reading weather data from: {self.csv_path}")
+        csv_path = Path(self.csv_path) if isinstance(self.csv_path, str) else self.csv_path
+        logger.info(f"Reading weather data from: {csv_path}")
         
         weather_data = []
         try:
-            with open(self.csv_path, 'r', encoding='utf-8') as file:
+            with open(str(csv_path), 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 for row_num, row in enumerate(reader, 1):
                     weather_data.append(row)
                     
                     # Log progress for large files
                     if row_num % 10000 == 0:
-                        logger.info(f"📊 Read {row_num:,} weather records...")
+                        logger.info(f"Read {row_num:,} weather records...")
             
-            logger.info(f"✅ Successfully read {len(weather_data):,} weather records")
+            logger.info(f"Successfully read {len(weather_data):,} weather records")
             return weather_data
             
         except Exception as e:
-            logger.error(f"❌ Error reading CSV file: {e}")
+            logger.error(f"Error reading CSV file: {e}")
             return []
     
     def create_weather_document(self, weather_record: Dict, record_id: int) -> Document:
@@ -176,7 +191,7 @@ Weather Summary: On {date_time}, {location} experienced temperatures of {temp_c:
     
     def import_to_vector_store(self, weather_data: List[Dict]) -> bool:
         """Import weather data into the vector store"""
-        logger.info(f"🔄 Converting {len(weather_data):,} weather records to documents...")
+        logger.info(f"Converting {len(weather_data):,} weather records to documents...")
         
         try:
             # Convert weather records to Document objects
@@ -187,22 +202,22 @@ Weather Summary: On {date_time}, {location} experienced temperatures of {temp_c:
                 
                 # Log progress for large datasets
                 if (i + 1) % 5000 == 0:
-                    logger.info(f"📝 Converted {i + 1:,} records to documents...")
+                    logger.info(f"Converted {i + 1:,} records to documents...")
             
-            logger.info(f"✅ Created {len(documents):,} documents")
+            logger.info(f"Created {len(documents):,} documents")
             
             # Check if vector store already exists and load it
             try:
-                logger.info("🔍 Checking for existing vector store...")
+                logger.info("Checking for existing vector store...")
                 self.vector_store.load()
-                logger.info("✅ Loaded existing vector store")
+                logger.info("Loaded existing vector store")
                 
                 # Add new documents to existing store
-                logger.info("➕ Adding weather documents to existing vector store...")
+                logger.info("Adding weather documents to existing vector store...")
                 self.vector_store.vs.add_documents(documents)
                 
             except Exception as e:
-                logger.info("📦 Creating new vector store with weather data...")
+                logger.info("Creating new vector store with weather data...")
                 # Create new vector store from documents
                 from langchain_chroma import Chroma
                 self.vector_store.vs = Chroma.from_documents(
@@ -212,20 +227,25 @@ Weather Summary: On {date_time}, {location} experienced temperatures of {temp_c:
                     persist_directory=self.vector_store.path
                 )
             
-            # Persist the vector store
-            logger.info("💾 Persisting vector store to disk...")
-            self.vector_store.vs.persist()
+            # Persist the vector store (Chroma auto-persists when persist_directory is set)
+            logger.info("Persisting vector store to disk...")
+            try:
+                if hasattr(self.vector_store.vs, 'persist'):
+                    self.vector_store.vs.persist()
+            except AttributeError:
+                # Newer Chroma versions auto-persist, no need to call persist()
+                pass
             
-            logger.info("🎉 Weather data successfully imported to vector store!")
+            logger.info("Weather data successfully imported to vector store!")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error importing to vector store: {e}")
+            logger.error(f"Error importing to vector store: {e}")
             return False
     
     def test_search(self) -> bool:
         """Test the imported data with sample searches"""
-        logger.info("🧪 Testing weather data search functionality...")
+        logger.info("Testing weather data search functionality...")
         
         try:
             # Load the vector store
@@ -240,36 +260,40 @@ Weather Summary: On {date_time}, {location} experienced temperatures of {temp_c:
             ]
             
             for query in test_queries:
-                logger.info(f"🔍 Testing query: '{query}'")
+                logger.info(f"Testing query: '{query}'")
                 results = self.vector_store.search(query, k=3)
                 
                 if results:
-                    logger.info(f"✅ Found {len(results)} results")
+                    logger.info(f"Found {len(results)} results")
                     for i, result in enumerate(results, 1):
                         location = result.metadata.get('location', 'Unknown')
                         date_time = result.metadata.get('date_time', 'Unknown')
                         temp = result.metadata.get('temperature_c', 'N/A')
                         logger.info(f"   {i}. {location} on {date_time} - {temp}°C")
                 else:
-                    logger.warning(f"⚠️  No results found for: '{query}'")
+                    logger.warning(f"No results found for: '{query}'")
                 
                 logger.info("")
             
-            logger.info("🎉 Search testing completed!")
+            logger.info("Search testing completed!")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error testing search: {e}")
+            logger.error(f"Error testing search: {e}")
             return False
 
 def main():
     """Main function to run the weather data import"""
-    logger.info("🌤️  Weather Data Importer for RAG System")
+    logger.info("Weather Data Importer for RAG System")
     logger.info("=" * 50)
     
     # Configuration
-    csv_path = "../shared/weather_data.csv"  # CSV is in shared directory
-    chroma_path = "./.chroma"  # Same path as RAG agent
+    # Get paths relative to script location
+    script_dir = Path(__file__).parent
+    csv_path = script_dir / "weather_data.csv"
+    # Vector store should be in RAG directory, not shared
+    rag_dir = script_dir.parent
+    chroma_path = rag_dir / ".chroma"
     collection = "rag_docs"    # Same collection as RAG agent
     
     # Initialize importer
@@ -277,28 +301,28 @@ def main():
     
     # Validate environment
     if not importer.validate_environment():
-        logger.error("❌ Environment validation failed. Please fix the issues above.")
+        logger.error("Environment validation failed. Please fix the issues above.")
         return False
     
     # Read weather data
     weather_data = importer.read_weather_data()
     if not weather_data:
-        logger.error("❌ Failed to read weather data")
+        logger.error("Failed to read weather data")
         return False
     
     # Import to vector store
     success = importer.import_to_vector_store(weather_data)
     if not success:
-        logger.error("❌ Failed to import weather data")
+        logger.error("Failed to import weather data")
         return False
     
     # Test the imported data
     importer.test_search()
     
-    logger.info("🎯 Import completed successfully!")
-    logger.info(f"📊 Imported {len(weather_data):,} weather records")
-    logger.info(f"💾 Data stored in: {chroma_path}/{collection}")
-    logger.info("\n💡 You can now query weather data through the RAG agent!")
+    logger.info("Import completed successfully!")
+    logger.info(f"Imported {len(weather_data):,} weather records")
+    logger.info(f"Data stored in: {chroma_path}/{collection}")
+    logger.info("\nYou can now query weather data through the RAG agent!")
     logger.info("Example queries:")
     logger.info('  - "What was the weather like in New York?"')
     logger.info('  - "Show me hot weather data above 30 degrees"')

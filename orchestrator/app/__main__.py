@@ -5,10 +5,12 @@ Orchestrator Agent main application with A2A SDK integration and FastAPI endpoin
 import logging
 import os
 import sys
+from pathlib import Path
 
 import click
 import httpx
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -19,6 +21,16 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, InMemoryTaskStore
 from a2a.types import AgentCard, AgentSkill, AgentCapabilities
 from a2a.client import A2ACardResolver
+
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+
+# LangSmith tracing configuration
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGSMITH_API_KEY", ""))
+os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGSMITH_PROJECT", "03892bba-bf1e-4c69-82d9-1058208e56ae"))
 
 from app.orchestrator import SmartOrchestrator
 from app.agent_management_api import router as agent_management_router, set_orchestrator
@@ -106,6 +118,25 @@ def create_fastapi_app(orchestrator: SmartOrchestrator) -> FastAPI:
         redoc_url="/redoc"
     )
     
+    # Add global exception handler
+    @fastapi_app.exception_handler(Exception)
+    async def global_exception_handler(request, exc):
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        logger.error(f"Full traceback: {error_trace}")
+        print(f"ERROR: UNHANDLED EXCEPTION: {exc}")
+        print(f"Traceback:\n{error_trace}")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"Internal server error: {str(exc)}",
+                "error_type": type(exc).__name__
+            }
+        )
+    
     # Add CORS middleware
     fastapi_app.add_middleware(
         CORSMiddleware,
@@ -128,9 +159,17 @@ def create_fastapi_app(orchestrator: SmartOrchestrator) -> FastAPI:
                 "docs": "/docs",
                 "register_agent": "/api/v1/agents/register",
                 "unregister_agent": "/api/v1/agents/unregister", 
-                "list_agents": "/api/v1/agents/list"
+                "list_agents": "/api/v1/agents/list",
+                "query": "/api/v1/agents/query",
+                "health": "/api/v1/agents/health"
             }
         }
+    
+    # Add health check endpoint at the FastAPI app level
+    @fastapi_app.get("/api/v1/agents/health")
+    async def health_check():
+        """Health check endpoint"""
+        return {"status": "ok", "message": "Orchestrator is running"}
     
     return fastapi_app
 
@@ -181,29 +220,31 @@ def main(host: str, port: int):
     """Starts the Orchestrator Agent server with FastAPI management endpoints."""
     try:
         # Create orchestrator instance
+        logger.info("Initializing SmartOrchestrator...")
         orchestrator = SmartOrchestrator()
+        logger.info(f"Orchestrator initialized with {len(orchestrator.agents)} agents: {list(orchestrator.agents.keys())}")
         
         # Create the combined application
         app = create_combined_app(host, port, orchestrator)
         
         agent_card = create_orchestrator_agent_card(host, port)
 
-        print(f"🚀 Starting Smart Orchestrator Agent on {host}:{port}")
-        print(f"📋 Agent Name: {agent_card.name}")
-        print(f"📝 Description: {agent_card.description}")
-        print(f"🎯 Skills: {', '.join([skill.name for skill in agent_card.skills])}")
-        print(f"⚙️  Capabilities: Intelligent routing, Dynamic agent discovery, Semantic understanding")
-        print(f"🔌 Pluggable: New agents can be registered at runtime")
+        print(f"Starting Smart Orchestrator Agent on {host}:{port}")
+        print(f"Agent Name: {agent_card.name}")
+        print(f"Description: {agent_card.description}")
+        print(f"Skills: {', '.join([skill.name for skill in agent_card.skills])}")
+        print(f"Capabilities: Intelligent routing, Dynamic agent discovery, Semantic understanding")
+        print(f"Pluggable: New agents can be registered at runtime")
         print()
-        print("🔧 FastAPI Management Endpoints:")
-        print(f"   📖 API Documentation: http://{host}:{port}/management/docs")
-        print(f"   📋 List Agents: http://{host}:{port}/management/api/v1/agents/list") 
-        print(f"   ➕ Register Agent: POST http://{host}:{port}/management/api/v1/agents/register")
-        print(f"   ➖ Unregister Agent: POST http://{host}:{port}/management/api/v1/agents/unregister")
+        print("FastAPI Management Endpoints:")
+        print(f"   API Documentation: http://{host}:{port}/management/docs")
+        print(f"   List Agents: http://{host}:{port}/management/api/v1/agents/list") 
+        print(f"   Register Agent: POST http://{host}:{port}/management/api/v1/agents/register")
+        print(f"   Unregister Agent: POST http://{host}:{port}/management/api/v1/agents/unregister")
         print()
-        print("🌐 A2A Protocol Endpoints:")
-        print(f"   🏠 A2A Root: http://{host}:{port}/")
-        print(f"   📄 Agent Card: http://{host}:{port}/agent-card")
+        print("A2A Protocol Endpoints:")
+        print(f"   A2A Root: http://{host}:{port}/")
+        print(f"   Agent Card: http://{host}:{port}/agent-card")
 
         uvicorn.run(app, host=host, port=port)
 

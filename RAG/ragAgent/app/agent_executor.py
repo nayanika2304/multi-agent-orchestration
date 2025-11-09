@@ -37,14 +37,29 @@ class RAGAgentExecutor(AgentExecutor):
     """RAG AgentExecutor Example."""
 
     def __init__(self):
-        # Initialize vector store (you can customize the path and collection name)
-        vector_store = VectorStore(path="./.chroma", collection="rag_docs")
+        # Initialize vector store - path should be relative to RAG directory, not ragAgent
+        # Get the RAG directory (parent of ragAgent)
+        rag_dir = current_dir.parent.parent
+        chroma_path = rag_dir / ".chroma"
+        
+        vector_store = VectorStore(path=str(chroma_path), collection="rag_docs")
         # Load existing vector store if it exists
         try:
             vector_store.load()
+            # Verify vector store is actually loaded and has data
+            if vector_store.vs is None:
+                raise Exception("Vector store object is None after load")
+            
+            # Test search to verify it's working
+            test_results = vector_store.search("test", k=1)
+            logger.info(f"Vector store loaded successfully from {chroma_path}")
+            logger.info(f"Vector store contains data (test search returned {len(test_results)} results)")
         except Exception as e:
-            logger.warning(f"Could not load existing vector store: {e}")
-            logger.info("You may need to ingest documents first using vector_store.ingest_folder()")
+            logger.error(f"Could not load existing vector store from {chroma_path}: {e}")
+            logger.error("Vector store is required for RAG agent to function.")
+            logger.error("Please run: cd RAG/shared && uv run python import_weather_sample.py")
+            # Still create the agent, but it will fail on queries
+            # This allows the agent to start but queries will fail gracefully
         
         self.agent = RAGAgent(vector_store)
 

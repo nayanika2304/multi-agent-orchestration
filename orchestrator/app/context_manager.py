@@ -58,13 +58,39 @@ class OrchestratorContextManager:
         
     def get_or_create_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None) -> str:
         """Get existing session or create new one"""
-        if session_id and session_id in self.sessions:
-            # Update last activity
-            self.sessions[session_id].last_activity = datetime.now()
-            return session_id
+        # Validate session_id is a valid UUID if provided
+        if session_id:
+            # Strip whitespace and check if it's not a placeholder
+            session_id = session_id.strip() if isinstance(session_id, str) else str(session_id)
+            
+            # Reject common placeholder values
+            if session_id.lower() in ['string', 'none', 'null', '']:
+                session_id = None
+            else:
+                try:
+                    # Try to parse as UUID to validate
+                    validated_uuid = uuid.UUID(session_id)
+                    validated_session_id = str(validated_uuid)
+                    
+                    # If valid UUID and exists in sessions, return it
+                    if validated_session_id in self.sessions:
+                        self.sessions[validated_session_id].last_activity = datetime.now()
+                        return validated_session_id
+                    else:
+                        # Valid UUID but doesn't exist yet - create session for it
+                        self.sessions[validated_session_id] = ConversationSession(
+                            session_id=validated_session_id,
+                            user_id=user_id,
+                            created_at=datetime.now(),
+                            last_activity=datetime.now()
+                        )
+                        return validated_session_id
+                except (ValueError, AttributeError, TypeError):
+                    # Invalid UUID format, ignore and create new
+                    pass
         
-        # Create new session
-        new_session_id = session_id or str(uuid.uuid4())
+        # Create new session with valid UUID
+        new_session_id = str(uuid.uuid4())
         self.sessions[new_session_id] = ConversationSession(
             session_id=new_session_id,
             user_id=user_id,
@@ -173,6 +199,20 @@ class OrchestratorContextManager:
         # Check if query contains pronouns/references that need resolution
         needs_context = any(re.search(pattern, user_query.lower()) for pattern in self.pronoun_patterns)
         
+        # Also check for report generation requests that might need previous context
+        report_keywords = ['report', 'generate', 'create', 'make', 'analyze', 'summarize']
+        is_report_request = any(keyword in user_query.lower() for keyword in report_keywords)
+        
+        # If it's a report request, always include context from previous turns
+        if is_report_request and session.turns:
+            last_turn = session.turns[-1]
+            # Check if previous turn was from a data source agent (RAG, etc.)
+            data_source_agents = ['RAG Agent', 'rag', 'search', 'query']
+            if any(agent.lower() in last_turn.agent_name.lower() for agent in data_source_agents):
+                # This is a report request following a data retrieval - include the data
+                enriched_query = self._enrich_with_previous_data(user_query, last_turn)
+                return enriched_query
+        
         if not needs_context:
             return user_query
         
@@ -183,6 +223,21 @@ class OrchestratorContextManager:
         enriched_query = self._resolve_references(user_query, last_turn)
         
         return enriched_query
+    
+    def _enrich_with_previous_data(self, user_query: str, last_turn: ConversationTurn) -> str:
+        """Enrich report request with data from previous agent response"""
+        # Extract the previous response data
+        previous_data = last_turn.agent_response
+        
+        # Format the enriched query to include the previous data
+        enriched = f"""{user_query}
+
+Previous data/response to analyze:
+{previous_data}
+
+Please generate a report based on the above data."""
+        
+        return enriched
     
     def _resolve_references(self, user_query: str, last_turn: ConversationTurn) -> str:
         """Resolve pronouns and references in user query"""

@@ -36,26 +36,11 @@ class MissingAPIKeyError(Exception):
 def main(host, port):
     """Starts the Report Agent server."""
     try:
-        if os.getenv('model_source',"google") == "google":
-           if not os.getenv('GOOGLE_API_KEY'):
-               raise MissingAPIKeyError(
-                   'GOOGLE_API_KEY environment variable not set.'
-               )
-        else:
-            if not os.getenv('TOOL_LLM_URL'):
-                raise MissingAPIKeyError(
-                    'TOOL_LLM_URL environment variable not set.'
-                )
-            if not os.getenv('TOOL_LLM_NAME'):
-                raise MissingAPIKeyError(
-                    'TOOL_LLM_NAME environment not variable not set.'
-                )
-        
-        # Check for OpenAI API key for report generation
-        if not os.getenv('OPENAI_API_KEY'):
-            logger.warning(
+        # Check for OpenAI API key (required for both agent orchestration and report generation)
+        if not os.getenv('OPENAI_API_KEY') and not os.getenv('API_KEY'):
+            raise MissingAPIKeyError(
                 'OPENAI_API_KEY environment variable not set. '
-                'Report generation may fail.'
+                'Required for agent orchestration and report generation.'
             )
     
         capabilities = AgentCapabilities(

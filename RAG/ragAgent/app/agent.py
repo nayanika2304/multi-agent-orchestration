@@ -1,6 +1,7 @@
 # ragAgent/rag_agent.py
 import sys
 import os
+import logging
 from pathlib import Path
 
 # Add the parent directory (RAG) to Python path to access shared modules
@@ -8,13 +9,25 @@ current_dir = Path(__file__).parent
 rag_dir = current_dir.parent.parent
 sys.path.insert(0, str(rag_dir))
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+
+# LangSmith tracing
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGSMITH_API_KEY", ""))
+os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGSMITH_PROJECT", "03892bba-bf1e-4c69-82d9-1058208e56ae"))
+
 from collections.abc import AsyncIterable
-from typing import Dict, Any, List, Literal
+from typing import Dict, Any, List, Literal, Optional
+import concurrent.futures
 import json
 
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
@@ -24,6 +37,7 @@ from shared.context import ContextWindowTracker, Message
 from shared.vectorstore import VectorStore
 
 memory = MemorySaver()
+logger = logging.getLogger(__name__)
 
 class ResponseFormat(BaseModel):
     """Respond to the user in this format."""
@@ -323,16 +337,12 @@ class RAGAgent:
     )
 
     def __init__(self, vector_store: VectorStore):
-        model_source = os.getenv("model_source", "google")
-        if model_source == "google":
-            self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
-        else:
-            self.model = ChatOpenAI(
-                model=os.getenv("TOOL_LLM_NAME", "gpt-4o-mini"),
-                openai_api_key=os.getenv("API_KEY", "EMPTY"),
-                openai_api_base=os.getenv("TOOL_LLM_URL"),
-                temperature=0
-            )
+        self.model = ChatOpenAI(
+            model=os.getenv("TOOL_LLM_NAME", "gpt-4o-mini"),
+            openai_api_key=os.getenv("OPENAI_API_KEY", os.getenv("API_KEY", "")),
+            openai_api_base=os.getenv("TOOL_LLM_URL", None),
+            temperature=0
+        )
         
         self.vs = vector_store
         self.tools = [
@@ -351,7 +361,7 @@ class RAGAgent:
         perform_rag_query._agent_instance = self
         
         # Context trackers for different stages
-        model_name = 'gemini-2.0-flash' if model_source == "google" else os.getenv("TOOL_LLM_NAME", "gpt-4o-mini")
+        model_name = os.getenv("TOOL_LLM_NAME", "gpt-4o-mini")
         self.tracker_plan = ContextWindowTracker(model_name)
         self.tracker_an = ContextWindowTracker(model_name)
         self.tracker_sum = ContextWindowTracker(model_name)
@@ -365,10 +375,26 @@ class RAGAgent:
             response_format=ResponseFormat,
         )
 
-    def _chat(self, messages: List[Dict[str, str]]) -> str:
+    def _chat(self, messages: List[Dict[str, str]], temperature: float = 0, max_tokens: Optional[int] = None) -> str:
         """Helper method to invoke the model directly for internal RAG processing"""
         formatted_messages = [(msg["role"], msg["content"]) for msg in messages]
-        response = self.model.invoke(formatted_messages)
+        
+        # Optimize LLM calls with reduced max_tokens for faster responses
+        # Planning and analysis don't need long responses
+        if max_tokens is None:
+            # Determine appropriate max_tokens based on stage
+            if "planner" in str(messages).lower() or "plan" in str(messages).lower():
+                max_tokens = 200  # Planning needs short responses
+            elif "analyze" in str(messages).lower() or "extract" in str(messages).lower():
+                max_tokens = 1000  # Analysis needs moderate length
+            else:
+                max_tokens = 2000  # Summarization needs more tokens
+        
+        # Use streaming=False for faster synchronous calls
+        response = self.model.invoke(
+            formatted_messages,
+            config={"temperature": temperature, "max_tokens": max_tokens}
+        )
         return response.content
 
     def _simple_summarizer(self, messages: List[Message], prev_summary: str | None):
@@ -386,39 +412,274 @@ class RAGAgent:
             self.tracker_sum.update_summary(self._simple_summarizer)
             self.turns_since_summary = 0
 
-    def _perform_rag_search(self, user_query: str) -> Dict[str, Any]:
-        """Internal method to perform the actual RAG search and answer generation"""
+    def _extract_location_entities(self, query: str) -> list:
+        """Extract location names from the query using simple heuristics and LLM"""
+        import re
+        
+        # Common US cities that might be in the data
+        common_cities = [
+            "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia",
+            "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville",
+            "San Francisco", "Indianapolis", "Columbus", "Fort Worth", "Charlotte",
+            "Seattle", "Denver", "Washington", "Boston", "El Paso", "Detroit",
+            "Nashville", "Portland", "Oklahoma City", "Las Vegas", "Memphis",
+            "Louisville", "Baltimore", "Milwaukee", "Albuquerque", "Tucson",
+            "Fresno", "Sacramento", "Kansas City", "Mesa", "Atlanta", "Omaha",
+            "Colorado Springs", "Raleigh", "Virginia Beach", "Miami", "Oakland",
+            "Minneapolis", "Tulsa", "Cleveland", "Wichita", "Arlington"
+        ]
+        
+        # Check for exact city names (case-insensitive)
+        found_locations = []
+        query_lower = query.lower()
+        for city in common_cities:
+            if city.lower() in query_lower:
+                found_locations.append(city)
+        
+        # Also try to extract using LLM for better entity recognition
+        if not found_locations:
+            try:
+                extract_prompt = f"""Extract location names (cities, states, countries) from this query. 
+Return only the location names, one per line. If no locations found, return "none".
+
+Query: {query}
+
+Locations:"""
+                response = self._chat([{"role": "user", "content": extract_prompt}])
+                locations = [l.strip() for l in response.splitlines() if l.strip() and l.strip().lower() != "none"]
+                found_locations.extend(locations)
+            except:
+                pass
+        
+        return list(set(found_locations))  # Remove duplicates
+    
+    def _enhance_query_with_location(self, query: str, locations: list) -> str:
+        """Enhance the query to emphasize location-specific information"""
+        if not locations:
+            return query
+        
+        location_str = ", ".join(locations)
+        enhanced = f"{query} (specifically for {location_str})"
+        return enhanced
+    
+    def _perform_rag_search_optimized(self, user_query: str) -> Dict[str, Any]:
+        """Optimized RAG search for simple queries - skips planning stage"""
         try:
-            # PLAN
-            SYSTEM_PLANNER = "You are a planner. Break the user goal into 2-4 precise retrieval subtasks."
-            self.tracker_plan.add("user", user_query)
-            plan_msgs = self.tracker_plan.build_prompt(SYSTEM_PLANNER)
-            plan = self._chat(plan_msgs)
-
-            # RETRIEVE (selective)
-            # naive subtask splitting: one query per line
-            subtasks = [s.strip("- ").strip() for s in plan.splitlines() if s.strip()]
-            retrieved = []
-            for st in subtasks[:4]:
-                docs = self.vs.search(st, k=4)
-                retrieved.extend(docs)
-
-            # ANALYZE
+            # Check if vector store is available
+            if self.vs is None or self.vs.vs is None:
+                return {
+                    "status": "error",
+                    "message": "Vector store is not loaded. Please ensure the vector store is populated."
+                }
+            
+            # Extract location entities
+            locations = self._extract_location_entities(user_query)
+            logger.info(f"Extracted locations from query: {locations}")
+            
+            # Skip planning - go straight to retrieval with the original query
+            filter_dict = None
+            if locations and len(locations) == 1:
+                filter_dict = {"location": locations[0]}
+                logger.info(f"Using location filter: {filter_dict}")
+            
+            # Single optimized search instead of multiple subtasks
+            search_query = self._enhance_query_with_location(user_query, locations) if locations else user_query
+            retrieved = self.vs.search(search_query, k=8, filter_dict=filter_dict)  # Get more docs in one search
+            
+            # Deduplicate
+            seen_content = set()
+            unique_retrieved = []
+            for d in retrieved:
+                content_hash = hash(d.page_content[:100])
+                if content_hash not in seen_content:
+                    seen_content.add(content_hash)
+                    unique_retrieved.append(d)
+            
+            retrieved = unique_retrieved[:8]  # Limit to 8 for faster processing
+            
+            if not retrieved:
+                return {
+                    "status": "error",
+                    "message": "No documents found in vector store."
+                }
+            
+            # Combine analysis and summarization into one step for simple queries
             docs_text = []
             citations = []
             for i, d in enumerate(retrieved, start=1):
                 docs_text.append(f"[{i}] {d.page_content}")
                 citations.append({"i": i, "meta": d.metadata})
             
-            SYSTEM_ANALYZER = "You analyze retrieved chunks and extract key facts with citations. Output JSON."
-            analyze_prompt = f"Documents:\n" + "\n\n".join(docs_text) + "\n\nTask: extract key facts with which doc id supports each fact. JSON array."
+            # Single LLM call for combined analysis + summarization
+            location_focus = ""
+            if locations:
+                location_focus = f"\n\nIMPORTANT: Focus only on {', '.join(locations)}. Ignore other locations."
+            
+            SYSTEM_COMBINED = f"""You are analyzing retrieved documents and generating a concise answer.
+Extract key facts and write a well-structured answer with inline citations like [#].
+{location_focus}
+
+Documents:
+{chr(10).join(docs_text)}
+
+Task: Extract key facts and provide a concise answer with citations."""
+            
+            self.tracker_sum.add("user", SYSTEM_COMBINED)
+            combined_msgs = self.tracker_sum.build_prompt("")
+            final_answer = self._chat(combined_msgs, max_tokens=1500)  # Combined response
+            
+            return {
+                "status": "completed",
+                "plan": "Optimized: Single-step processing",
+                "insights_json": "{}",  # Skip separate insights for simple queries
+                "answer_markdown": final_answer,
+                "citations": citations,
+                "metrics": {
+                    "planner": {"tokens": 0, "calls": 0},
+                    "analyzer": {"tokens": 0, "calls": 0},
+                    "summarizer": self.tracker_sum.metrics()
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error in optimized RAG search: {e}")
+            return {
+                "status": "error",
+                "message": f"Error during RAG processing: {str(e)}"
+            }
+
+    def _perform_rag_search(self, user_query: str) -> Dict[str, Any]:
+        """Internal method to perform the actual RAG search and answer generation"""
+        try:
+            # Check if vector store is available
+            if self.vs is None or self.vs.vs is None:
+                return {
+                    "status": "error",
+                    "message": "Vector store is not loaded. Please ensure the vector store is populated. Run: cd RAG/shared && uv run python import_weather_sample.py"
+                }
+            
+            # Extract location entities from query
+            locations = self._extract_location_entities(user_query)
+            logger.info(f"Extracted locations from query: {locations}")
+            
+            # PLAN - Enhanced to focus on specific entities
+            SYSTEM_PLANNER = """You are a planner. Break the user goal into 2-4 precise retrieval subtasks.
+Focus on specific entities mentioned (like locations, dates, topics). 
+If a specific location is mentioned, make sure subtasks emphasize that location.
+Keep subtasks focused and specific."""
+            
+            # Enhance query for planning if locations found
+            planning_query = self._enhance_query_with_location(user_query, locations) if locations else user_query
+            self.tracker_plan.add("user", planning_query)
+            plan_msgs = self.tracker_plan.build_prompt(SYSTEM_PLANNER)
+            plan = self._chat(plan_msgs)
+
+            # RETRIEVE (selective with location filtering) - PARALLELIZED
+            subtasks = [s.strip("- ").strip() for s in plan.splitlines() if s.strip()]
+            retrieved = []
+            
+            # If we found a specific location, use metadata filtering
+            filter_dict = None
+            if locations and len(locations) == 1:
+                # Single location - use strict filtering
+                filter_dict = {"location": locations[0]}
+                logger.info(f"Using location filter: {filter_dict}")
+            
+            # Parallelize vector searches for better performance
+            import asyncio
+            import concurrent.futures
+            
+            def perform_search(subtask: str) -> list:
+                """Perform a single search operation"""
+                try:
+                    # Enhance subtask with location if not already emphasized
+                    search_query = subtask
+                    if locations and not any(loc.lower() in subtask.lower() for loc in locations):
+                        search_query = self._enhance_query_with_location(subtask, locations)
+                    
+                    docs = self.vs.search(search_query, k=4, filter_dict=filter_dict)
+                    return docs
+                except Exception as e:
+                    logger.warning(f"Search failed for subtask '{subtask}': {e}")
+                    return []
+            
+            # Execute searches in parallel using ThreadPoolExecutor
+            # Vector store operations are I/O bound, so threading helps
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(subtasks[:4]))) as executor:
+                search_futures = {
+                    executor.submit(perform_search, st): st 
+                    for st in subtasks[:4]
+                }
+                
+                for future in concurrent.futures.as_completed(search_futures):
+                    try:
+                        docs = future.result()
+                        retrieved.extend(docs)
+                    except Exception as e:
+                        subtask = search_futures[future]
+                        logger.warning(f"Search future failed for subtask '{subtask}': {e}")
+                        continue
+            
+            # If we have multiple locations or no strict filter, do post-retrieval filtering
+            if locations and len(locations) == 1 and filter_dict:
+                # Already filtered, but double-check
+                filtered_retrieved = []
+                for doc in retrieved:
+                    doc_location = doc.metadata.get("location", "").lower()
+                    query_location = locations[0].lower()
+                    if query_location in doc_location or doc_location in query_location:
+                        filtered_retrieved.append(doc)
+                    elif not doc_location:  # Keep docs without location metadata
+                        filtered_retrieved.append(doc)
+                
+                if filtered_retrieved:
+                    retrieved = filtered_retrieved[:16]  # Limit to top results
+                logger.info(f"Post-filtered to {len(retrieved)} documents matching location '{locations[0]}'")
+            
+            # Check if we retrieved any documents
+            if not retrieved:
+                return {
+                    "status": "error",
+                    "message": "No documents found in vector store. The vector store may be empty. Please populate it by running: cd RAG/shared && uv run python import_weather_sample.py"
+                }
+
+            # Deduplicate retrieved documents by content hash to avoid processing duplicates
+            seen_content = set()
+            unique_retrieved = []
+            for d in retrieved:
+                content_hash = hash(d.page_content[:100])  # Hash first 100 chars for dedup
+                if content_hash not in seen_content:
+                    seen_content.add(content_hash)
+                    unique_retrieved.append(d)
+            
+            # Limit to top 12 documents to reduce processing time
+            retrieved = unique_retrieved[:12]
+            logger.info(f"Retrieved {len(retrieved)} unique documents (after deduplication)")
+            
+            # ANALYZE - with location focus
+            docs_text = []
+            citations = []
+            for i, d in enumerate(retrieved, start=1):
+                docs_text.append(f"[{i}] {d.page_content}")
+                citations.append({"i": i, "meta": d.metadata})
+            
+            # Enhanced analyzer prompt to focus on requested location
+            location_focus = ""
+            if locations:
+                location_focus = f"\n\nIMPORTANT: The user asked specifically about {', '.join(locations)}. Only extract facts related to these locations. Ignore information about other locations."
+            
+            SYSTEM_ANALYZER = f"You analyze retrieved chunks and extract key facts with citations. Output JSON.{location_focus}"
+            analyze_prompt = f"Documents:\n" + "\n\n".join(docs_text) + f"\n\nTask: extract key facts with which doc id supports each fact. JSON array.{location_focus}"
             self.tracker_an.add("user", analyze_prompt)
             an_msgs = self.tracker_an.build_prompt(SYSTEM_ANALYZER)
             insights_json = self._chat(an_msgs)
 
-            # SUMMARIZE
-            SYSTEM_SUMMARIZER = "You write a concise, well-structured answer grounded in provided insights. Include inline citations like [#]."
-            self.tracker_sum.add("user", f"Insights JSON:\n{insights_json}")
+            # SUMMARIZE - with strict location focus
+            location_instruction = ""
+            if locations:
+                location_instruction = f"\n\nCRITICAL: The user asked about {', '.join(locations)}. Your answer must ONLY include information about {', '.join(locations)}. Do NOT mention other locations like Houston, Los Angeles, etc. If the retrieved documents contain information about other locations, ignore that information completely."
+            
+            SYSTEM_SUMMARIZER = f"You write a concise, well-structured answer grounded in provided insights. Include inline citations like [#].{location_instruction}"
+            self.tracker_sum.add("user", f"Insights JSON:\n{insights_json}\n\nOriginal Query: {user_query}{location_instruction}")
             sum_msgs = self.tracker_sum.build_prompt(SYSTEM_SUMMARIZER)
             final_answer = self._chat(sum_msgs)
 
@@ -444,7 +705,23 @@ class RAGAgent:
 
     def invoke(self, query, context_id) -> str:
         # Perform RAG search directly since this is a specialized function
-        rag_result = self._perform_rag_search(query)
+        import time
+        start_time = time.time()
+        logger.info(f"Starting RAG search for query: {query[:100]}...")
+        
+        # Early return optimization: If query is very simple, skip planning
+        simple_query_patterns = ['weather', 'temperature', 'humidity']
+        is_simple_query = any(pattern in query.lower() for pattern in simple_query_patterns) and len(query.split()) < 10
+        
+        if is_simple_query:
+            logger.info("Detected simple query - using optimized path")
+            # For simple queries, skip the planning stage and go straight to retrieval
+            rag_result = self._perform_rag_search_optimized(query)
+        else:
+            rag_result = self._perform_rag_search(query)
+        
+        elapsed_time = time.time() - start_time
+        logger.info(f"RAG search completed in {elapsed_time:.2f} seconds. Status: {rag_result.get('status')}")
         
         if rag_result["status"] == "completed":
             return {

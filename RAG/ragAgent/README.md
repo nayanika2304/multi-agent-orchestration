@@ -185,11 +185,10 @@ Connect directly to the RAG agent:
 cd RAG/ragAgent
 
 # Create environment file with your API keys
-echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
+echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
 
-# OR for alternative LLM providers
-echo "model_source=openai" > .env
-echo "API_KEY=your_api_key_here" > .env
+# OR for alternative OpenAI-compatible LLM providers
+echo "OPENAI_API_KEY=your_api_key_here" > .env
 echo "TOOL_LLM_URL=your_llm_url" > .env
 echo "TOOL_LLM_NAME=your_llm_name" > .env
 
@@ -263,7 +262,8 @@ def perform_rag_query(question: str, include_citations: bool = True) -> str:
     
 class RAGAgent:
     def __init__(self, vector_store: VectorStore):
-        self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
+        from langchain_openai import ChatOpenAI
+        self.model = ChatOpenAI(model='gpt-4o-mini')
         self.tools = [search_documents, query_database, semantic_search, perform_rag_query]
         self.graph = create_react_agent(self.model, tools=self.tools)
 ```
@@ -324,7 +324,6 @@ RAG/ragAgent/
 ```toml
 dependencies = [
     "a2a-sdk[http-server]>=0.3.0",     # A2A protocol and MCP support
-    "langchain-google-genai>=2.0.0",   # Google AI integration
     "langchain-openai>=0.1.0",         # OpenAI integration  
     "langgraph>=0.2.0",                # ReAct agent framework
     "chromadb>=0.5.5",                 # Vector database
@@ -336,13 +335,11 @@ dependencies = [
 
 ### Environment Configuration
 ```bash
-# Google AI (recommended)
-export GOOGLE_API_KEY="your-google-api-key"
+# OpenAI (required)
+export OPENAI_API_KEY="your-openai-api-key"
 
-# OR OpenAI
-export model_source="openai"
-export API_KEY="your-openai-api-key"
-export TOOL_LLM_URL="https://api.openai.com/v1"
+# Optional: For custom OpenAI-compatible endpoints
+export TOOL_LLM_URL="https://your-custom-endpoint.com/v1"
 export TOOL_LLM_NAME="gpt-4o-mini"
 ```
 

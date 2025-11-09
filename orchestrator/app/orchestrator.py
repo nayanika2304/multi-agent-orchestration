@@ -3,15 +3,28 @@
 Smart Orchestrator Agent with A2A SDK integration and Context Management
 """
 import asyncio
+import os
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Tuple, Any
 from a2a.client import A2AClient, A2ACardResolver
 
 import httpx
+from dotenv import load_dotenv
 from langgraph.graph import StateGraph
 from a2a.types import AgentCard, AgentSkill, AgentCapabilities
 from app.context_manager import OrchestratorContextManager
+
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+
+# LangSmith tracing configuration
+os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGSMITH_API_KEY", ""))
+os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGSMITH_PROJECT", "03892bba-bf1e-4c69-82d9-1058208e56ae"))
 
 class RouterState(TypedDict):
     request: str
@@ -41,11 +54,11 @@ class SmartOrchestrator:
         
         # Default agent endpoints
         default_agents = [
-            "http://localhost:8001",
-            "http://localhost:8002",
-            "http://localhost:8003",
-            "http://localhost:8004",
-            "http://localhost:8005",
+            "http://localhost:8001",  # Time/Date Agent
+            "http://localhost:8002",  # Math Agent
+            "http://localhost:8003",  # Currency Agent
+            "http://localhost:8004",  # RAG Agent
+            "http://localhost:8005",  # Report Agent
         ]
         
         # Fetch agent cards using A2A client - run async initialization
@@ -59,11 +72,11 @@ class SmartOrchestrator:
                     agent_card = await self._fetch_agent_card_with_a2a(httpx_client, endpoint)
                     if agent_card:
                         self.agents[agent_card.name] = agent_card
-                        print(f"✅ Loaded {agent_card.name} from {endpoint}")
+                        print(f"Loaded {agent_card.name} from {endpoint}")
                     else:
-                        print(f"⚠️  Failed to load agent card from {endpoint}")
+                        print(f"WARNING: Failed to load agent card from {endpoint}")
                 except Exception as e:
-                    print(f"❌ Error loading agent from {endpoint}: {e}")
+                    print(f"ERROR: Error loading agent from {endpoint}: {e}")
         
         # Update skill keywords and agent capabilities after loading all default agents
         self._update_skill_keywords()
@@ -314,10 +327,10 @@ class SmartOrchestrator:
         request = state["request"]
         
         # Log the start of agent selection
-        print(f"\n🔍 AGENT SELECTION STARTED")
-        print(f"📝 Request: '{request}'")
-        print(f"📊 Available agents: {list(self.agents.keys())}")
-        print(f"🎯 Analyzing {len(self.agents)} agents for best match...")
+        print(f"\nAGENT SELECTION STARTED")
+        print(f"Request: '{request}'")
+        print(f"Available agents: {list(self.agents.keys())}")
+        print(f"Analyzing {len(self.agents)} agents for best match...")
         
         # Get scores for all agents based on request content
         agent_scores = {}
@@ -338,10 +351,10 @@ class SmartOrchestrator:
             semantic_matches[agent_id] = semantic_reasons
             
             # Log detailed scoring for each agent
-            print(f"\n📈 Agent: {agent_card.name} (ID: {agent_id})")
-            print(f"   🔑 Keyword Score: {keyword_score:.2f} (matched skills: {matched_skills})")
-            print(f"   🧠 Semantic Score: {semantic_score:.2f} (reasons: {semantic_reasons})")
-            print(f"   📊 Combined Score: {combined_score:.2f}")
+            print(f"\nAgent: {agent_card.name} (ID: {agent_id})")
+            print(f"   Keyword Score: {keyword_score:.2f} (matched skills: {matched_skills})")
+            print(f"   Semantic Score: {semantic_score:.2f} (reasons: {semantic_reasons})")
+            print(f"   Combined Score: {combined_score:.2f}")
         
         # Find the best agent based on combined score
         best_agent = None
@@ -352,15 +365,15 @@ class SmartOrchestrator:
                 best_score = score
                 best_agent = agent_id
         
-        print(f"\n🎯 SCORING RESULTS:")
-        print(f"   🥇 Best Agent: {best_agent}")
-        print(f"   📊 Best Score: {best_score:.2f}")
-        print(f"   🔄 All Scores: {[(aid, f'{score:.2f}') for aid, score in sorted(agent_scores.items(), key=lambda x: x[1], reverse=True)]}")
+        print(f"\nSCORING RESULTS:")
+        print(f"   Best Agent: {best_agent}")
+        print(f"   Best Score: {best_score:.2f}")
+        print(f"   All Scores: {[(aid, f'{score:.2f}') for aid, score in sorted(agent_scores.items(), key=lambda x: x[1], reverse=True)]}")
         
         # If no agent has a good score, don't default to any specific agent
         # This makes the orchestrator more flexible and not biased toward any agent
         if best_score < 0.2:  # Minimum threshold for confidence
-            print(f"❌ No agent meets minimum threshold (0.2), best score was {best_score:.2f}")
+            print(f"ERROR: No agent meets minimum threshold (0.2), best score was {best_score:.2f}")
             best_agent = None
             best_score = 0.0
             reasoning = "No agent has sufficient capability to handle this request"
@@ -380,11 +393,11 @@ class SmartOrchestrator:
             else:
                 reasoning = "No suitable agent found"
         
-        print(f"\n✅ FINAL SELECTION:")
-        print(f"   🎯 Selected Agent: {self.agents[best_agent].name if best_agent else 'None'}")
-        print(f"   📊 Confidence: {confidence if best_agent else 0.0:.2f}")
-        print(f"   🧠 Reasoning: {reasoning}")
-        print(f"🔍 AGENT SELECTION COMPLETED\n")
+        print(f"\nFINAL SELECTION:")
+        print(f"   Selected Agent: {self.agents[best_agent].name if best_agent else 'None'}")
+        print(f"   Confidence: {confidence if best_agent else 0.0:.2f}")
+        print(f"   Reasoning: {reasoning}")
+        print(f"AGENT SELECTION COMPLETED\n")
         
         # Update state with routing decision
         state.update({
@@ -543,8 +556,8 @@ class SmartOrchestrator:
         
         # Handle case where no suitable agent was found
         if not selected_agent:
-            print(f"⚠️  No agent selected - returning error message")
-            state["response"] = "⚠️ No suitable agent found for this request. Please try a different query or register additional agents."
+            print(f"WARNING: No agent selected - returning error message")
+            state["response"] = "No suitable agent found for this request. Please try a different query or register additional agents."
             state["metadata"]["status"] = "no_agent_found"
             state["metadata"]["response_timestamp"] = datetime.now().isoformat()
             return state
@@ -552,48 +565,91 @@ class SmartOrchestrator:
         agent_card = self.agents[selected_agent]
         endpoint = agent_card.url
         
-        print(f"\n🚀 ROUTING REQUEST TO AGENT")
-        print(f"   🎯 Agent: {agent_card.name} (ID: {selected_agent})")
-        print(f"   🔗 Endpoint: {endpoint}")
-        print(f"   📝 Request: '{request}'")
+        print(f"\nROUTING REQUEST TO AGENT")
+        print(f"   Agent: {agent_card.name} (ID: {selected_agent})")
+        print(f"   Endpoint: {endpoint}")
+        print(f"   Request: '{request}'")
         
         state["metadata"]["agent_endpoint"] = endpoint
         
         try:
-            print(f"   📡 Forwarding request to agent...")
+            # Get conversation context for report requests
+            context_data = None
+            if "report" in request.lower() or "generate" in request.lower() or "create" in request.lower():
+                # Check if there's previous conversation data
+                context = self.context_manager.get_conversation_context(state["session_id"], last_n_turns=2)
+                if context.get("turns") and len(context["turns"]) >= 1:
+                    # Get the most recent turn (before current)
+                    previous_turn = context["turns"][-1]
+                    # Check if previous agent was a data source (RAG, search, etc.)
+                    data_agents = ['RAG Agent', 'rag', 'search', 'query', 'weather']
+                    if any(agent.lower() in previous_turn.get("agent_name", "").lower() for agent in data_agents):
+                        context_data = {
+                            "previous_data": previous_turn.get("agent_response", ""),
+                            "previous_agent": previous_turn.get("agent_name", "Unknown"),
+                            "previous_query": previous_turn.get("user_query", "")
+                        }
+                        print(f"   Found context from previous {context_data['previous_agent']} response")
+            
+            print(f"   Forwarding request to agent...")
             # Forward the request to the selected agent and get the actual response
-            actual_response = await self._forward_request_to_agent(endpoint, request, state["session_id"])
-            print(f"   ✅ Received response from agent: '{actual_response[:100]}{'...' if len(actual_response) > 100 else ''}'")
-            state["response"] = f"🎯 Routed to {agent_card.name} → {actual_response}"
+            actual_response = await self._forward_request_to_agent(endpoint, request, state["session_id"], context_data)
+            print(f"   Received response from agent: '{actual_response[:100]}{'...' if len(actual_response) > 100 else ''}'")
+            state["response"] = f"Routed to {agent_card.name}: {actual_response}"
             state["metadata"]["status"] = "completed"
         except Exception as e:
-            print(f"   ❌ Failed to forward request: {str(e)}")
+            error_msg = str(e)
+            print(f"   ERROR: Failed to forward request: {error_msg}")
+            import traceback
+            print(f"   Full traceback: {traceback.format_exc()}")
             # Fallback to routing information if forwarding fails
-            state["response"] = f"🎯 Smart Routing Decision\n\n"
-            state["response"] += f"✅ Selected Agent: {agent_card.name}\n"
-            state["response"] += f"🔗 Endpoint: {endpoint}\n"
-            state["response"] += f"📊 Confidence: {state.get('confidence', 0):.2f}\n"
-            state["response"] += f"🧠 Reasoning: {state.get('reasoning', 'No reasoning provided')}\n\n"
-            state["response"] += f"⚠️ Could not forward request: {str(e)}\n"
-            state["response"] += f"💡 Connect directly to {agent_card.name} at {endpoint}"
+            state["response"] = f"Smart Routing Decision\n\n"
+            state["response"] += f"Selected Agent: {agent_card.name}\n"
+            state["response"] += f"Endpoint: {endpoint}\n"
+            state["response"] += f"Confidence: {state.get('confidence', 0):.2f}\n"
+            state["response"] += f"Reasoning: {state.get('reasoning', 'No reasoning provided')}\n\n"
+            state["response"] += f"WARNING: Could not forward request: {error_msg}\n"
+            state["response"] += f"Connect directly to {agent_card.name} at {endpoint}"
             state["metadata"]["status"] = "routing_only"
+            state["metadata"]["error"] = error_msg
         
-        print(f"🚀 REQUEST ROUTING COMPLETED\n")
+        print(f"REQUEST ROUTING COMPLETED\n")
         
         state["metadata"]["response_timestamp"] = datetime.now().isoformat()
         
         return state
     
-    async def _forward_request_to_agent(self, endpoint: str, request: str, session_id: str) -> str:
+    async def _forward_request_to_agent(self, endpoint: str, request: str, session_id: str, context_data: Optional[Dict] = None) -> str:
         """Forward request to agent using A2A protocol with consistent session ID"""
         import json
-        from uuid import uuid4
+        from uuid import uuid4, UUID
+        
+        # Validate session_id is a valid UUID
+        try:
+            # Ensure session_id is a valid UUID string
+            validated_uuid = UUID(session_id)
+            context_id = str(validated_uuid)
+        except (ValueError, TypeError, AttributeError):
+            # If invalid, get a valid session from context manager
+            print(f"WARNING: Invalid session_id '{session_id}' - getting valid session from context manager")
+            context_id = self.context_manager.get_or_create_session(session_id)
+        
+        # Enhance request with context data if provided (especially for report agent)
+        enhanced_request = request
+        if context_data and context_data.get("previous_data"):
+            # For report agent, include the previous data in a structured way
+            if "report" in request.lower() or "generate" in request.lower():
+                enhanced_request = f"""{request}
+
+Context from previous query:
+{context_data['previous_data']}
+
+Please use the above context/data to generate the report."""
+                print(f"   Enhanced request with context from {context_data.get('previous_agent', 'previous agent')}")
         
         # Create A2A JSON-RPC request payload using message/send method
         task_id = str(uuid4())
         message_id = str(uuid4())
-        # Use session_id as context_id for consistency across agents
-        context_id = session_id
         
         payload = {
             "jsonrpc": "2.0",
@@ -608,7 +664,7 @@ class SmartOrchestrator:
                     "parts": [
                         {
                             "type": "text",
-                            "text": request
+                            "text": enhanced_request
                         }
                     ]
                 },
@@ -619,20 +675,43 @@ class SmartOrchestrator:
         }
         
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Send task to agent
-                response = await client.post(
-                    endpoint,
-                    json=payload,
-                    headers={"Content-Type": "application/json"}
-                )
+            # Ensure endpoint doesn't have trailing slash for POST requests (A2A protocol expects root)
+            endpoint_clean = endpoint.rstrip('/')
+            print(f"   Sending A2A request to {endpoint_clean}")
+            print(f"   Payload method: {payload.get('method')}")
+            print(f"   Payload params keys: {list(payload.get('params', {}).keys())}")
+            
+            # Increased timeout for RAG agent which may take longer to process
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # Send task to agent - A2A protocol expects POST to root endpoint
+                print(f"   POST request to {endpoint_clean}...")
+                try:
+                    response = await client.post(
+                        endpoint_clean,
+                        json=payload,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    print(f"   Response status: {response.status_code}")
+                    print(f"   Response headers: {dict(response.headers)}")
+                    print(f"   Response text (first 500 chars): {response.text[:500]}")
+                except httpx.ConnectError as conn_err:
+                    print(f"   CONNECTION ERROR DETAILS: {conn_err}")
+                    print(f"   Error type: {type(conn_err)}")
+                    raise
+                except httpx.HTTPStatusError as http_err:
+                    print(f"   HTTP ERROR DETAILS: Status {http_err.response.status_code}")
+                    print(f"   Response text: {http_err.response.text[:500]}")
+                    raise
                 response.raise_for_status()
                 
                 result = response.json()
+                print(f"   Response JSON keys: {list(result.keys())}")
                 
                 # Check for JSON-RPC error
                 if "error" in result:
-                    raise Exception(f"Agent returned error: {result['error']}")
+                    error_details = result['error']
+                    print(f"   JSON-RPC error: {error_details}")
+                    raise Exception(f"Agent returned JSON-RPC error: {error_details}")
                 
                 # Get the response from message/send
                 if "result" not in result:
@@ -646,9 +725,17 @@ class SmartOrchestrator:
                     if "id" in message_result and "status" in message_result:
                         task_id = message_result["id"]
                         
-                        # Poll for task completion
-                        for attempt in range(30):  # Poll for up to 30 seconds
-                            await asyncio.sleep(1)
+                        # Poll for task completion - RAG agent may need more time for processing
+                        max_attempts = 120  # Poll for up to 120 seconds (2 minutes)
+                        poll_interval = 1  # Check every second
+                        
+                        print(f"   Polling for task completion (task_id: {task_id})...")
+                        for attempt in range(max_attempts):
+                            if attempt > 0:  # Don't sleep on first attempt
+                                await asyncio.sleep(poll_interval)
+                            
+                            if attempt % 10 == 0:  # Log every 10 seconds
+                                print(f"   Polling attempt {attempt + 1}/{max_attempts}...")
                             
                             get_payload = {
                                 "jsonrpc": "2.0",
@@ -659,45 +746,71 @@ class SmartOrchestrator:
                                 }
                             }
                             
-                            get_response = await client.post(
-                                endpoint,
-                                json=get_payload,
-                                headers={"Content-Type": "application/json"}
-                            )
-                            get_response.raise_for_status()
-                            
-                            get_result = get_response.json()
-                            
-                            if "result" in get_result and get_result["result"]:
-                                task_data = get_result["result"]
+                            try:
+                                get_response = await client.post(
+                                    endpoint_clean,
+                                    json=get_payload,
+                                    headers={"Content-Type": "application/json"},
+                                    timeout=5.0  # Individual request timeout
+                                )
+                                get_response.raise_for_status()
                                 
-                                # Check task state
-                                task_state = task_data.get("status", {}).get("state")
+                                get_result = get_response.json()
                                 
-                                if task_state == "completed":
-                                    # Extract response from artifacts
-                                    artifacts = task_data.get("artifacts", [])
-                                    if artifacts:
-                                        for artifact in artifacts:
-                                            parts = artifact.get("parts", [])
+                                if "result" in get_result and get_result["result"]:
+                                    task_data = get_result["result"]
+                                    
+                                    # Check task state
+                                    task_state = task_data.get("status", {}).get("state")
+                                    print(f"   Task state: {task_state} (attempt {attempt + 1})")
+                                    
+                                    if task_state == "completed":
+                                        # Extract response from artifacts
+                                        artifacts = task_data.get("artifacts", [])
+                                        if artifacts:
+                                            for artifact in artifacts:
+                                                parts = artifact.get("parts", [])
+                                                for part in parts:
+                                                    if part.get("kind") == "text":
+                                                        return part.get("text", "No text in response")
+                                        
+                                        return "Task completed but no response text found"
+                                    elif task_state == "failed":
+                                        error_msg = task_data.get("status", {}).get("message", {})
+                                        if error_msg and isinstance(error_msg, dict):
+                                            parts = error_msg.get("parts", [])
                                             for part in parts:
                                                 if part.get("kind") == "text":
-                                                    return part.get("text", "No text in response")
+                                                    return f"Agent task failed: {part.get('text', 'Unknown error')}"
+                                        return "Agent task failed"
+                                    elif task_state == "input-required":
+                                        # Extract response from status message for input-required state
+                                        status_message = task_data.get("status", {}).get("message", {})
+                                        if status_message:
+                                            parts = status_message.get("parts", [])
+                                            for part in parts:
+                                                if part.get("kind") == "text":
+                                                    return part.get("text", "No text in input-required response")
+                                        return "Agent requires input but no message provided"
                                     
-                                    return "Task completed but no response text found"
-                                elif task_state == "failed":
-                                    return "Agent task failed"
-                                elif task_state == "input-required":
-                                    # Extract response from status message for input-required state
-                                    status_message = task_data.get("status", {}).get("message", {})
-                                    if status_message:
-                                        parts = status_message.get("parts", [])
-                                        for part in parts:
-                                            if part.get("kind") == "text":
-                                                return part.get("text", "No text in input-required response")
-                                    return "Agent requires input but no message provided"
+                                    # If still working or pending, continue polling
+                                    if task_state in ["working", "pending"]:
+                                        continue
+                                    
+                                    # Unknown state, log and continue polling
+                                    print(f"   Unknown task state: {task_state}, continuing to poll...")
+                                    continue
+                                    
+                            except Exception as poll_err:
+                                print(f"   Polling error (attempt {attempt + 1}): {poll_err}")
+                                # Continue polling on individual request errors
+                                if attempt < max_attempts - 1:
+                                    continue
+                                else:
+                                    raise
                         
-                        return "Task did not complete within timeout"
+                        print(f"   WARNING: Task did not complete within {max_attempts * poll_interval} seconds")
+                        return f"Task did not complete within {max_attempts * poll_interval} seconds timeout"
                     
                     # If it's a direct Message response
                     elif "parts" in message_result:
@@ -708,13 +821,33 @@ class SmartOrchestrator:
                 
                 return "Unexpected response format from agent"
                 
+        except httpx.ConnectError as e:
+            error_msg = f"Could not connect to agent at {endpoint}. Make sure the agent is running. Error: {str(e)}"
+            print(f"   CONNECTION ERROR: {error_msg}")
+            raise Exception(error_msg)
+        except httpx.TimeoutException as e:
+            error_msg = f"Request to agent at {endpoint} timed out. Error: {str(e)}"
+            print(f"   TIMEOUT ERROR: {error_msg}")
+            raise Exception(error_msg)
+        except httpx.HTTPStatusError as e:
+            error_msg = f"Agent at {endpoint} returned HTTP {e.response.status_code}: {e.response.text[:200]}"
+            print(f"   HTTP ERROR: {error_msg}")
+            raise Exception(error_msg)
         except Exception as e:
-            raise Exception(f"Request forwarding failed: {str(e)}")
+            error_msg = f"Request forwarding failed: {str(e)}"
+            print(f"   GENERAL ERROR: {error_msg}")
+            import traceback
+            print(f"   TRACEBACK: {traceback.format_exc()}")
+            raise Exception(error_msg)
 
     async def process_request(self, request: str, session_id: Optional[str] = None) -> Dict:
         """Process a request through the LangGraph workflow with context management"""
+        # Log incoming session_id for debugging
+        print(f"process_request called with session_id: {session_id} (type: {type(session_id)})")
+        
         # Get or create session
         session_id = self.context_manager.get_or_create_session(session_id)
+        print(f"Validated session_id: {session_id}")
         
         # Store original request
         original_request = request
@@ -725,7 +858,7 @@ class SmartOrchestrator:
         # Log context enrichment if it occurred
         context_enriched = enriched_request != request
         if context_enriched:
-            print(f"🔗 Context Enrichment Applied:")
+            print(f"Context Enrichment Applied:")
             print(f"   Original: '{request}'")
             print(f"   Enriched: '{enriched_request}'")
         
@@ -746,23 +879,38 @@ class SmartOrchestrator:
             
             # Handle case where no agent was selected
             if not final_state["selected_agent"]:
-                            return {
-                "success": True,
-                "request": request,
-                "original_request": final_state["original_request"],
-                "enriched_request": final_state["request"],
-                "session_id": final_state["session_id"],
-                "selected_agent_id": "",
-                "selected_agent_name": "None",
-                "agent_skills": [],
-                "confidence": 0.0,
-                "reasoning": final_state["reasoning"],
-                "response": final_state["response"],
-                "metadata": final_state["metadata"],
-                "context_enriched": final_state["metadata"].get("context_enriched", False)
-            }
+                return {
+                    "success": True,
+                    "request": request,
+                    "original_request": final_state["original_request"],
+                    "enriched_request": final_state["request"],
+                    "session_id": final_state["session_id"],
+                    "selected_agent_id": "",
+                    "selected_agent_name": "None",
+                    "agent_skills": [],
+                    "confidence": 0.0,
+                    "reasoning": final_state["reasoning"],
+                    "response": final_state["response"],
+                    "metadata": final_state["metadata"],
+                    "context_enriched": final_state["metadata"].get("context_enriched", False)
+                }
             
-            agent_card = self.agents[final_state["selected_agent"]]
+            # Check if selected agent exists in registry
+            selected_agent_id = final_state["selected_agent"]
+            if selected_agent_id not in self.agents:
+                return {
+                    "success": False,
+                    "request": request,
+                    "session_id": session_id,
+                    "error": f"Selected agent '{selected_agent_id}' not found in registry. Available agents: {list(self.agents.keys())}",
+                    "metadata": {
+                        "request_id": str(uuid.uuid4()),
+                        "error_timestamp": datetime.now().isoformat(),
+                        "selected_agent_id": selected_agent_id
+                    }
+                }
+            
+            agent_card = self.agents[selected_agent_id]
             
             # Record conversation turn for context management
             if final_state["selected_agent"]:
@@ -796,13 +944,18 @@ class SmartOrchestrator:
             }
             
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"ERROR: Error in process_request: {str(e)}")
+            print(f"Traceback:\n{error_trace}")
             return {
                 "success": False,
                 "request": request,
                 "session_id": session_id,
-                "error": str(e),
+                "error": f"{str(e)}",
                 "metadata": {
                     "request_id": str(uuid.uuid4()),
-                    "error_timestamp": datetime.now().isoformat()
+                    "error_timestamp": datetime.now().isoformat(),
+                    "error_type": type(e).__name__
                 }
             }

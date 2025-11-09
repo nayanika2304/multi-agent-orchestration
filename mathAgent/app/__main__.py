@@ -20,13 +20,16 @@ from a2a.types import (
     AgentCard,
     AgentSkill,
 )
+from pathlib import Path
 from dotenv import load_dotenv
 
 from app.agent import MathAgent
 from app.agent_executor import MathAgentExecutor
 
 
-load_dotenv()
+# Load environment variables from .env file in project root
+project_root = Path(__file__).parent.parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,20 +45,10 @@ class MissingAPIKeyError(Exception):
 def main(host, port):
     """Starts the Math Agent server."""
     try:
-        if os.getenv('model_source',"google") == "google":
-           if not os.getenv('GOOGLE_API_KEY'):
-               raise MissingAPIKeyError(
-                   'GOOGLE_API_KEY environment variable not set.'
-               )
-        else:
-            if not os.getenv('TOOL_LLM_URL'):
-                raise MissingAPIKeyError(
-                    'TOOL_LLM_URL environment variable not set.'
-                )
-            if not os.getenv('TOOL_LLM_NAME'):
-                raise MissingAPIKeyError(
-                    'TOOL_LLM_NAME environment not variable not set.'
-                )
+        if not os.getenv('OPENAI_API_KEY'):
+            raise MissingAPIKeyError(
+                'OPENAI_API_KEY environment variable not set. Please set it in the .env file.'
+            )
     
         capabilities = AgentCapabilities(streaming=True, 
         pushNotifications=False
@@ -123,8 +116,8 @@ def main(host, port):
             agent_card=agent_card, http_handler=request_handler
         )
 
-        print(f"🧮 Starting Math Agent on port {port}")
-        print("📊 Available capabilities (via MCP):")
+        print(f"Starting Math Agent on port {port}")
+        print("Available capabilities (via MCP):")
         print("  • Arithmetic calculations (2+2, sin(pi/4), sqrt(16))")
         print("  • Equation solving (x^2 - 4 = 0)")
         print("  • Calculus (derivatives and integrals)")

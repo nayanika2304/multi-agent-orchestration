@@ -179,20 +179,18 @@ Connect directly to the report agent:
 cd RAG/reportAgent
 
 # Create environment file with your API keys
-echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
 echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
 
-# OR for alternative LLM providers
-echo "model_source=openai" > .env
-echo "API_KEY=your_api_key_here" > .env
-echo "TOOL_LLM_URL=your_llm_url" > .env
-echo "TOOL_LLM_NAME=your_llm_name" > .env
+# OR for alternative OpenAI-compatible LLM providers
+echo "OPENAI_API_KEY=your_api_key_here" > .env
+echo "TOOL_LLM_URL=https://your-custom-endpoint.com/v1" > .env
+echo "TOOL_LLM_NAME=gpt-4o-mini" > .env
 
 # Run the agent
 uv run -m app
 
 # Test directly using curl
-curl -X POST http://localhost:8003 \
+curl -X POST http://localhost:8005 \
   -H "Content-Type: application/json" \
   -d '{"method": "message/send", "params": {"message": {"parts": [{"text": "Generate a report from insights: {performance: high} and answer: Great results achieved"}]}}}'
 ```
@@ -212,7 +210,7 @@ uv run -m app -m "Generate a professional report" -v
 uv run -m app -m "Create an executive summary document" -v
 
 # Test direct agent communication
-curl -X POST http://localhost:8003 \
+curl -X POST http://localhost:8005 \
   -H "Content-Type: application/json" \
   -d '{"method": "message/send", "params": {"message": {"parts": [{"text": "Generate a report from this data"}]}}}'
 ```
@@ -271,7 +269,8 @@ def save_pdf(text: str, path: str = "rag_report.pdf", chart_paths: str = "") -> 
     
 class ReportAgent:
     def __init__(self):
-        self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
+        from langchain_openai import ChatOpenAI
+        self.model = ChatOpenAI(model='gpt-4o-mini')
         self.tools = [generate_report_text, generate_chart, save_pdf]
         self.graph = create_react_agent(self.model, tools=self.tools)
 ```
@@ -346,34 +345,26 @@ dependencies = [
 
 ### Environment Configuration
 ```bash
-# Google AI (recommended for agent orchestration)
-export GOOGLE_API_KEY="your-google-api-key"
-
-# OpenAI (required for report generation)
+# OpenAI (required for agent orchestration and report generation)
 export OPENAI_API_KEY="your-openai-api-key"
 
-# OR Alternative LLM for agent orchestration
-export model_source="openai"
-export API_KEY="your-api-key"
-export TOOL_LLM_URL="https://api.openai.com/v1"
-export TOOL_LLM_NAME="gpt-3.5-turbo"
+# OR Alternative OpenAI-compatible LLM provider
+export OPENAI_API_KEY="your-api-key"
+export TOOL_LLM_URL="https://your-custom-endpoint.com/v1"
+export TOOL_LLM_NAME="gpt-4o-mini"
 ```
 
 ## 🔧 Configuration Options
 
-### LLM Provider Selection
+### LLM Configuration
 ```python
-# Auto-detect from environment
-model_source = os.getenv("model_source", "google")
-
-if model_source == "google":
-    self.model = ChatGoogleGenerativeAI(model='gemini-2.0-flash')
-else:
-    self.model = ChatOpenAI(
-        model=os.getenv("TOOL_LLM_NAME"),
-        openai_api_key=os.getenv("API_KEY"),
-        openai_api_base=os.getenv("TOOL_LLM_URL")
-    )
+# Uses OpenAI by default
+self.model = ChatOpenAI(
+    model=os.getenv("TOOL_LLM_NAME", "gpt-4o-mini"),
+    openai_api_key=os.getenv("OPENAI_API_KEY", os.getenv("API_KEY", "")),
+    openai_api_base=os.getenv("TOOL_LLM_URL", None),
+    temperature=0
+)
 ```
 
 ### Response Format Configuration

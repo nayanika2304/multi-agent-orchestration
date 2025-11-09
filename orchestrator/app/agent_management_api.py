@@ -3,8 +3,10 @@
 FastAPI endpoints for agent management operations
 """
 import logging
-from typing import Dict, List, Optional
+import json
+from typing import Dict, List, Optional, AsyncGenerator
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.orchestrator import SmartOrchestrator
 
@@ -48,13 +50,28 @@ class ListAgentsResponse(BaseModel):
     total_count: int
     message: str
 
+class QueryRequest(BaseModel):
+    query: str = Field(..., description="The user query to process")
+    session_id: Optional[str] = Field(None, description="Optional session ID for conversation context")
+
+class QueryResponse(BaseModel):
+    success: bool
+    response: str
+    selected_agent_id: Optional[str] = None
+    selected_agent_name: Optional[str] = None
+    confidence: Optional[float] = None
+    reasoning: Optional[str] = None
+    session_id: Optional[str] = None
+    error: Optional[str] = None
+
 # Global orchestrator instance (will be injected)
 _orchestrator_instance: Optional[SmartOrchestrator] = None
 
 def get_orchestrator() -> SmartOrchestrator:
     """Dependency to get the orchestrator instance"""
     if _orchestrator_instance is None:
-        raise HTTPException(status_code=500, detail="Orchestrator not initialized")
+        logger.error("Orchestrator instance is None - not initialized")
+        raise HTTPException(status_code=500, detail="Orchestrator not initialized. Please check server logs.")
     return _orchestrator_instance
 
 def set_orchestrator(orchestrator: SmartOrchestrator):
@@ -217,4 +234,183 @@ async def list_agents_get(
     Alternative GET endpoint for listing agents.
     Usage: GET /api/v1/agents/list_agents
     """
-    return await list_agents(orchestrator) 
+    return await list_agents(orchestrator)
+
+@router.post("/query", response_model=QueryResponse)
+async def process_query(
+    request: QueryRequest,
+    orchestrator: SmartOrchestrator = Depends(get_orchestrator)
+):
+    """
+    Process a user query through the orchestrator.
+    The orchestrator will route the query to the most appropriate agent.
+    """
+    print(f"\n{'='*80}")
+    print(f"📥 QUERY REQUEST RECEIVED")
+    print(f"{'='*80}")
+    print(f"Query: {request.query}")
+    print(f"Session ID: {request.session_id}")
+    print(f"Orchestrator agents: {list(orchestrator.agents.keys())}")
+    print(f"{'='*80}\n")
+    
+    try:
+        logger.info(f"Processing query: {request.query[:100]}...")
+        print(f"Starting query processing...")
+        
+        # Validate request
+        if not request.query or not request.query.strip():
+            return QueryResponse(
+                success=False,
+                response="",
+                selected_agent_id=None,
+                selected_agent_name=None,
+                confidence=None,
+                reasoning=None,
+                session_id=request.session_id,
+                error="Query cannot be empty"
+            )
+        
+        print(f"Calling orchestrator.process_request...")
+        result = await orchestrator.process_request(
+            request.query.strip(),
+            session_id=request.session_id
+        )
+        print(f"Received result from orchestrator: {type(result)}")
+        print(f"Result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+        
+        # Ensure result is a dict
+        if not isinstance(result, dict):
+            error_msg = f"Unexpected result type: {type(result)}, value: {result}"
+            logger.error(error_msg)
+            print(f"ERROR: {error_msg}")
+            return QueryResponse(
+                success=False,
+                response="",
+                selected_agent_id=None,
+                selected_agent_name=None,
+                confidence=None,
+                reasoning=None,
+                session_id=request.session_id,
+                error=error_msg
+            )
+        
+        if result.get("success", False):
+            return QueryResponse(
+                success=True,
+                response=result.get("response", ""),
+                selected_agent_id=result.get("selected_agent_id"),
+                selected_agent_name=result.get("selected_agent_name"),
+                confidence=result.get("confidence"),
+                reasoning=result.get("reasoning"),
+                session_id=result.get("session_id")
+            )
+        else:
+            return QueryResponse(
+                success=False,
+                response="",
+                selected_agent_id=None,
+                selected_agent_name=None,
+                confidence=None,
+                reasoning=None,
+                session_id=request.session_id,
+                error=result.get("error", "Unknown error occurred")
+            )
+            
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        
+        # Print to console (will definitely show up)
+        print(f"\n{'='*80}")
+        print(f"ERROR: EXCEPTION IN QUERY ENDPOINT")
+        print(f"{'='*80}")
+        print(f"Error: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        print(f"\nFull traceback:")
+        print(error_trace)
+        print(f"{'='*80}\n")
+        
+        logger.error(f"Error processing query: {e}", exc_info=True)
+        logger.error(f"Full traceback: {error_trace}")
+        
+        # Return proper error response
+        try:
+            return QueryResponse(
+                success=False,
+                response="",
+                selected_agent_id=None,
+                selected_agent_name=None,
+                confidence=None,
+                reasoning=None,
+                session_id=getattr(request, 'session_id', None),
+                error=f"Internal server error: {str(e)}"
+            )
+        except Exception as response_error:
+            # If even creating the response fails, log and raise
+            print(f"CRITICAL ERROR: Failed to create error response: {response_error}")
+            logger.error(f"Failed to create error response: {response_error}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error: {str(e)}"
+            )
+
+@router.post("/query/stream")
+async def process_query_stream(
+    request: QueryRequest,
+    orchestrator: SmartOrchestrator = Depends(get_orchestrator)
+):
+    """
+    Process a user query through the orchestrator with streaming response.
+    """
+    async def generate_stream() -> AsyncGenerator[str, None]:
+        try:
+            # Validate request
+            if not request.query or not request.query.strip():
+                yield f"data: {json.dumps({'type': 'error', 'error': 'Query cannot be empty'})}\n\n"
+                return
+            
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Processing query...'})}\n\n"
+            
+            # Process request
+            result = await orchestrator.process_request(
+                request.query.strip(),
+                session_id=request.session_id
+            )
+            
+            # Stream the result
+            if isinstance(result, dict):
+                if result.get("success", False):
+                    # Stream metadata first
+                    if result.get("selected_agent_name"):
+                        yield f"data: {json.dumps({'type': 'metadata', 'agent': result.get('selected_agent_name'), 'confidence': result.get('confidence'), 'reasoning': result.get('reasoning')})}\n\n"
+                    
+                    # Stream response text in chunks
+                    response_text = result.get("response", "")
+                    if response_text:
+                        # Stream in chunks for better UX
+                        chunk_size = 50
+                        for i in range(0, len(response_text), chunk_size):
+                            chunk = response_text[i:i + chunk_size]
+                            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
+                    
+                    # Send completion
+                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'error', 'error': result.get('error', 'Unknown error occurred')})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'error': f'Unexpected result type: {type(result)}'})}\n\n"
+                
+        except Exception as e:
+            logger.error(f"Error in streaming query: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'error': f'Internal server error: {str(e)}'})}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    ) 

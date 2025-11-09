@@ -13,6 +13,18 @@ import logging
 from pathlib import Path
 from typing import List, Dict
 
+# Load .env file from project root
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (3 levels up from shared/)
+    project_root = Path(__file__).parent.parent.parent
+    env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        logging.info(f"Loaded .env from {env_path}")
+except ImportError:
+    pass  # dotenv not available, will use system env vars
+
 # Add the RAG directory to Python path for shared modules  
 current_dir = Path(__file__).parent
 rag_dir = current_dir.parent
@@ -95,36 +107,40 @@ Weather Conditions in {location}: On {date_time}, the temperature was {temp_c:.1
 
 def main():
     """Import a sample of weather data"""
-    logger.info("🌤️  Weather Data Sample Importer for RAG System")
+    logger.info("Weather Data Sample Importer for RAG System")
     logger.info("=" * 50)
     
     # Check API key
     if not os.getenv("OPENAI_API_KEY"):
-        logger.error("❌ OPENAI_API_KEY environment variable not set")
+        logger.error("OPENAI_API_KEY environment variable not set")
         return False
     
     # Configuration
-    csv_path = "../shared/weather_data.csv"
+    # Get paths relative to script location
+    script_dir = Path(__file__).parent
+    csv_path = script_dir / "weather_data.csv"
     sample_size = 1000  # Only import first 1000 records
-    chroma_path = "./.chroma"
+    # Vector store should be in RAG directory, not shared
+    rag_dir = script_dir.parent
+    chroma_path = rag_dir / ".chroma"
     collection = "rag_docs"
     
-    logger.info(f"📝 Importing {sample_size} weather records (sample)")
+    logger.info(f"Importing {sample_size} weather records (sample)")
     
     # Read sample data
     weather_data = []
     try:
-        with open(csv_path, 'r', encoding='utf-8') as file:
+        with open(str(csv_path), 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             for i, row in enumerate(reader):
                 if i >= sample_size:
                     break
                 weather_data.append(row)
     except Exception as e:
-        logger.error(f"❌ Error reading CSV: {e}")
+        logger.error(f"Error reading CSV: {e}")
         return False
     
-    logger.info(f"✅ Read {len(weather_data)} weather records")
+    logger.info(f"Read {len(weather_data)} weather records")
     
     # Convert to documents
     documents = []
@@ -132,20 +148,20 @@ def main():
         doc = create_weather_document(record, i + 1)
         documents.append(doc)
     
-    logger.info(f"✅ Created {len(documents)} documents")
+    logger.info(f"Created {len(documents)} documents")
     
     # Import to vector store
     try:
-        vector_store = VectorStore(path=chroma_path, collection=collection)
+        vector_store = VectorStore(path=str(chroma_path), collection=collection)
         
         # Try to load existing store
         try:
             vector_store.load()
-            logger.info("✅ Loaded existing vector store")
+            logger.info("Loaded existing vector store")
             vector_store.vs.add_documents(documents)
-            logger.info("➕ Added weather documents to existing store")
+            logger.info("Added weather documents to existing store")
         except:
-            logger.info("📦 Creating new vector store")
+            logger.info("Creating new vector store")
             from langchain_chroma import Chroma
             vector_store.vs = Chroma.from_documents(
                 documents, 
@@ -154,28 +170,33 @@ def main():
                 persist_directory=chroma_path
             )
         
-        # Persist
-        vector_store.vs.persist()
-        logger.info("💾 Vector store persisted")
+            # Persist (Chroma auto-persists when persist_directory is set, but we can try persist if available)
+        try:
+            if hasattr(vector_store.vs, 'persist'):
+                vector_store.vs.persist()
+            logger.info("Vector store persisted")
+        except AttributeError:
+            # Newer Chroma versions auto-persist, no need to call persist()
+            logger.info("Vector store persisted (auto-saved)")
         
         # Test search
-        logger.info("🧪 Testing search...")
+        logger.info("Testing search...")
         results = vector_store.search("weather in New York", k=3)
         if results:
-            logger.info(f"✅ Search test passed - found {len(results)} results")
+            logger.info(f"Search test passed - found {len(results)} results")
             for i, result in enumerate(results, 1):
                 location = result.metadata.get('location', 'Unknown')
                 temp = result.metadata.get('temperature_c', 'N/A')
                 logger.info(f"   {i}. {location} - {temp}°C")
         
-        logger.info("🎉 Sample weather data import completed!")
-        logger.info(f"📊 Imported {len(documents)} weather records")
-        logger.info("💡 You can now query weather data through the RAG agent!")
+        logger.info("Sample weather data import completed!")
+        logger.info(f"Imported {len(documents)} weather records")
+        logger.info("You can now query weather data through the RAG agent!")
         
         return True
         
     except Exception as e:
-        logger.error(f"❌ Error importing to vector store: {e}")
+        logger.error(f"Error importing to vector store: {e}")
         return False
 
 if __name__ == "__main__":
