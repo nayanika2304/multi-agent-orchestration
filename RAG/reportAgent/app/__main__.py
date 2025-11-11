@@ -1,14 +1,13 @@
+import argparse
 import logging
 import os
 import sys
 
-import click
-import httpx
 import uvicorn
 
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, InMemoryTaskStore
+from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import (
     AgentCapabilities,
     AgentCard,
@@ -30,11 +29,27 @@ class MissingAPIKeyError(Exception):
     """Exception for missing API key."""
 
 
-@click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=8005)
-def main(host, port):
+def main():
     """Starts the Report Agent server."""
+    parser = argparse.ArgumentParser(
+        description="Report Agent server"
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Host to bind to (default: localhost)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8005,
+        help="Port to bind to (default: 8005)"
+    )
+    args = parser.parse_args()
+    
+    host = args.host
+    port = args.port
+    
     try:
         # Check for OpenAI API key (required for both agent orchestration and report generation)
         if not os.getenv('OPENAI_API_KEY') and not os.getenv('API_KEY'):
@@ -43,10 +58,7 @@ def main(host, port):
                 'Required for agent orchestration and report generation.'
             )
     
-        capabilities = AgentCapabilities(
-            streaming=True, 
-            pushNotifications=True
-            )
+        capabilities = AgentCapabilities(streaming=True)
         
         # Enhanced skills with report generation and data visualization keywords for better orchestrator routing
         report_skills = [
@@ -112,12 +124,9 @@ def main(host, port):
             skills=report_skills,
         )
 
-        httpx_client = httpx.AsyncClient()
         request_handler = DefaultRequestHandler(
             agent_executor=ReportAgentExecutor(),
             task_store=InMemoryTaskStore(),
-            push_config_store=InMemoryPushNotificationConfigStore(),
-            push_sender=BasePushNotificationSender(httpx_client, InMemoryPushNotificationConfigStore()),
         )
         server = A2AStarletteApplication(
             agent_card=agent_card, http_handler=request_handler

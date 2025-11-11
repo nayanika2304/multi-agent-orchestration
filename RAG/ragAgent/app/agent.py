@@ -440,132 +440,132 @@ class RAGAgent:
         if not found_locations:
             try:
                 extract_prompt = f"""Extract location names (cities, states, countries) from this query. 
-Return only the location names, one per line. If no locations found, return "none".
+                        Return only the location names, one per line. If no locations found, return "none".
 
-Query: {query}
+                        Query: {query}
 
-Locations:"""
-                response = self._chat([{"role": "user", "content": extract_prompt}])
-                locations = [l.strip() for l in response.splitlines() if l.strip() and l.strip().lower() != "none"]
-                found_locations.extend(locations)
-            except:
-                pass
-        
-        return list(set(found_locations))  # Remove duplicates
-    
-    def _enhance_query_with_location(self, query: str, locations: list) -> str:
-        """Enhance the query to emphasize location-specific information"""
-        if not locations:
-            return query
-        
-        location_str = ", ".join(locations)
-        enhanced = f"{query} (specifically for {location_str})"
-        return enhanced
-    
-    def _perform_rag_search_optimized(self, user_query: str) -> Dict[str, Any]:
-        """Optimized RAG search for simple queries - skips planning stage"""
-        try:
-            # Check if vector store is available
-            if self.vs is None or self.vs.vs is None:
-                return {
-                    "status": "error",
-                    "message": "Vector store is not loaded. Please ensure the vector store is populated."
-                }
-            
-            # Extract location entities
-            locations = self._extract_location_entities(user_query)
-            logger.info(f"Extracted locations from query: {locations}")
-            
-            # Skip planning - go straight to retrieval with the original query
-            filter_dict = None
-            if locations and len(locations) == 1:
-                filter_dict = {"location": locations[0]}
-                logger.info(f"Using location filter: {filter_dict}")
-            
-            # Single optimized search instead of multiple subtasks
-            search_query = self._enhance_query_with_location(user_query, locations) if locations else user_query
-            retrieved = self.vs.search(search_query, k=8, filter_dict=filter_dict)  # Get more docs in one search
-            
-            # Deduplicate
-            seen_content = set()
-            unique_retrieved = []
-            for d in retrieved:
-                content_hash = hash(d.page_content[:100])
-                if content_hash not in seen_content:
-                    seen_content.add(content_hash)
-                    unique_retrieved.append(d)
-            
-            retrieved = unique_retrieved[:8]  # Limit to 8 for faster processing
-            
-            if not retrieved:
-                return {
-                    "status": "error",
-                    "message": "No documents found in vector store."
-                }
-            
-            # Combine analysis and summarization into one step for simple queries
-            docs_text = []
-            citations = []
-            for i, d in enumerate(retrieved, start=1):
-                docs_text.append(f"[{i}] {d.page_content}")
-                citations.append({"i": i, "meta": d.metadata})
-            
-            # Single LLM call for combined analysis + summarization
-            location_focus = ""
-            if locations:
-                location_focus = f"\n\nIMPORTANT: Focus only on {', '.join(locations)}. Ignore other locations."
-            
-            SYSTEM_COMBINED = f"""You are analyzing retrieved documents and generating a concise answer.
-Extract key facts and write a well-structured answer with inline citations like [#].
-{location_focus}
+                        Locations:"""
+                                        response = self._chat([{"role": "user", "content": extract_prompt}])
+                                        locations = [l.strip() for l in response.splitlines() if l.strip() and l.strip().lower() != "none"]
+                                        found_locations.extend(locations)
+                                    except:
+                                        pass
+                                
+                                return list(set(found_locations))  # Remove duplicates
+                            
+                            def _enhance_query_with_location(self, query: str, locations: list) -> str:
+                                """Enhance the query to emphasize location-specific information"""
+                                if not locations:
+                                    return query
+                                
+                                location_str = ", ".join(locations)
+                                enhanced = f"{query} (specifically for {location_str})"
+                                return enhanced
+                            
+                            def _perform_rag_search_optimized(self, user_query: str) -> Dict[str, Any]:
+                                """Optimized RAG search for simple queries - skips planning stage"""
+                                try:
+                                    # Check if vector store is available
+                                    if self.vs is None or self.vs.vs is None:
+                                        return {
+                                            "status": "error",
+                                            "message": "Vector store is not loaded. Please ensure the vector store is populated."
+                                        }
+                                    
+                                    # Extract location entities
+                                    locations = self._extract_location_entities(user_query)
+                                    logger.info(f"Extracted locations from query: {locations}")
+                                    
+                                    # Skip planning - go straight to retrieval with the original query
+                                    filter_dict = None
+                                    if locations and len(locations) == 1:
+                                        filter_dict = {"location": locations[0]}
+                                        logger.info(f"Using location filter: {filter_dict}")
+                                    
+                                    # Single optimized search instead of multiple subtasks
+                                    search_query = self._enhance_query_with_location(user_query, locations) if locations else user_query
+                                    retrieved = self.vs.search(search_query, k=8, filter_dict=filter_dict)  # Get more docs in one search
+                                    
+                                    # Deduplicate
+                                    seen_content = set()
+                                    unique_retrieved = []
+                                    for d in retrieved:
+                                        content_hash = hash(d.page_content[:100])
+                                        if content_hash not in seen_content:
+                                            seen_content.add(content_hash)
+                                            unique_retrieved.append(d)
+                                    
+                                    retrieved = unique_retrieved[:8]  # Limit to 8 for faster processing
+                                    
+                                    if not retrieved:
+                                        return {
+                                            "status": "error",
+                                            "message": "No documents found in vector store."
+                                        }
+                                    
+                                    # Combine analysis and summarization into one step for simple queries
+                                    docs_text = []
+                                    citations = []
+                                    for i, d in enumerate(retrieved, start=1):
+                                        docs_text.append(f"[{i}] {d.page_content}")
+                                        citations.append({"i": i, "meta": d.metadata})
+                                    
+                                    # Single LLM call for combined analysis + summarization
+                                    location_focus = ""
+                                    if locations:
+                                        location_focus = f"\n\nIMPORTANT: Focus only on {', '.join(locations)}. Ignore other locations."
+                                    
+                                    SYSTEM_COMBINED = f"""You are analyzing retrieved documents and generating a concise answer.
+                        Extract key facts and write a well-structured answer with inline citations like [#].
+                        {location_focus}
 
-Documents:
-{chr(10).join(docs_text)}
+                        Documents:
+                        {chr(10).join(docs_text)}
 
-Task: Extract key facts and provide a concise answer with citations."""
-            
-            self.tracker_sum.add("user", SYSTEM_COMBINED)
-            combined_msgs = self.tracker_sum.build_prompt("")
-            final_answer = self._chat(combined_msgs, max_tokens=1500)  # Combined response
-            
-            return {
-                "status": "completed",
-                "plan": "Optimized: Single-step processing",
-                "insights_json": "{}",  # Skip separate insights for simple queries
-                "answer_markdown": final_answer,
-                "citations": citations,
-                "metrics": {
-                    "planner": {"tokens": 0, "calls": 0},
-                    "analyzer": {"tokens": 0, "calls": 0},
-                    "summarizer": self.tracker_sum.metrics()
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error in optimized RAG search: {e}")
-            return {
-                "status": "error",
-                "message": f"Error during RAG processing: {str(e)}"
-            }
+                        Task: Extract key facts and provide a concise answer with citations."""
+                                    
+                                    self.tracker_sum.add("user", SYSTEM_COMBINED)
+                                    combined_msgs = self.tracker_sum.build_prompt("")
+                                    final_answer = self._chat(combined_msgs, max_tokens=1500)  # Combined response
+                                    
+                                    return {
+                                        "status": "completed",
+                                        "plan": "Optimized: Single-step processing",
+                                        "insights_json": "{}",  # Skip separate insights for simple queries
+                                        "answer_markdown": final_answer,
+                                        "citations": citations,
+                                        "metrics": {
+                                            "planner": {"tokens": 0, "calls": 0},
+                                            "analyzer": {"tokens": 0, "calls": 0},
+                                            "summarizer": self.tracker_sum.metrics()
+                                        }
+                                    }
+                                except Exception as e:
+                                    logger.error(f"Error in optimized RAG search: {e}")
+                                    return {
+                                        "status": "error",
+                                        "message": f"Error during RAG processing: {str(e)}"
+                                    }
 
-    def _perform_rag_search(self, user_query: str) -> Dict[str, Any]:
-        """Internal method to perform the actual RAG search and answer generation"""
-        try:
-            # Check if vector store is available
-            if self.vs is None or self.vs.vs is None:
-                return {
-                    "status": "error",
-                    "message": "Vector store is not loaded. Please ensure the vector store is populated. Run: cd RAG/shared && uv run python import_weather_sample.py"
-                }
-            
-            # Extract location entities from query
-            locations = self._extract_location_entities(user_query)
-            logger.info(f"Extracted locations from query: {locations}")
-            
-            # PLAN - Enhanced to focus on specific entities
-            SYSTEM_PLANNER = """You are a planner. Break the user goal into 2-4 precise retrieval subtasks.
-Focus on specific entities mentioned (like locations, dates, topics). 
-If a specific location is mentioned, make sure subtasks emphasize that location.
-Keep subtasks focused and specific."""
+                            def _perform_rag_search(self, user_query: str) -> Dict[str, Any]:
+                                """Internal method to perform the actual RAG search and answer generation"""
+                                try:
+                                    # Check if vector store is available
+                                    if self.vs is None or self.vs.vs is None:
+                                        return {
+                                            "status": "error",
+                                            "message": "Vector store is not loaded. Please ensure the vector store is populated. Run: cd RAG/shared && uv run python import_weather_sample.py"
+                                        }
+                                    
+                                    # Extract location entities from query
+                                    locations = self._extract_location_entities(user_query)
+                                    logger.info(f"Extracted locations from query: {locations}")
+                                    
+                                    # PLAN - Enhanced to focus on specific entities
+                                    SYSTEM_PLANNER = """You are a planner. Break the user goal into 2-4 precise retrieval subtasks.
+                        Focus on specific entities mentioned (like locations, dates, topics). 
+                        If a specific location is mentioned, make sure subtasks emphasize that location.
+                        Keep subtasks focused and specific."""
             
             # Enhance query for planning if locations found
             planning_query = self._enhance_query_with_location(user_query, locations) if locations else user_query

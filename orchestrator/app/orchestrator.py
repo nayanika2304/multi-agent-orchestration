@@ -4,6 +4,7 @@ Smart Orchestrator Agent with A2A SDK integration and Context Management
 """
 import asyncio
 import os
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -303,7 +304,6 @@ class SmartOrchestrator:
                 "keywords": [tag for skill in agent_card.skills for tag in (skill.tags or [])],
                 "capabilities": [cap for cap, enabled in [
                     ("streaming", agent_card.capabilities.streaming),
-                    ("push_notifications", getattr(agent_card.capabilities, 'push_notifications', False)),
                     ("state_transition_history", getattr(agent_card.capabilities, 'state_transition_history', False))
                 ] if enabled]
             })
@@ -365,9 +365,13 @@ class SmartOrchestrator:
                 best_score = score
                 best_agent = agent_id
         
+        # Get number of agents for normalization
+        num_agents = len(agent_scores)
+        
         print(f"\nSCORING RESULTS:")
         print(f"   Best Agent: {best_agent}")
         print(f"   Best Score: {best_score:.2f}")
+        print(f"   Number of Agents: {num_agents}")
         print(f"   All Scores: {[(aid, f'{score:.2f}') for aid, score in sorted(agent_scores.items(), key=lambda x: x[1], reverse=True)]}")
         
         # If no agent has a good score, don't default to any specific agent
@@ -379,7 +383,9 @@ class SmartOrchestrator:
             reasoning = "No agent has sufficient capability to handle this request"
         else:
             # Calculate confidence (0.0 to 1.0)
-            confidence = min(best_score / 5.0, 1.0)
+            # Normalize by number of agents to account for competition level
+            # More agents = more competition, so same score gives lower confidence
+            confidence = min(best_score / num_agents, 1.0) if num_agents > 0 else 0.0
             
             # Generate reasoning based on matched skills and semantic analysis
             if best_agent is not None:
@@ -573,23 +579,61 @@ class SmartOrchestrator:
         state["metadata"]["agent_endpoint"] = endpoint
         
         try:
-            # Get conversation context for report requests
+            # Get conversation context - always include recent turns for better context awareness
             context_data = None
-            if "report" in request.lower() or "generate" in request.lower() or "create" in request.lower():
-                # Check if there's previous conversation data
-                context = self.context_manager.get_conversation_context(state["session_id"], last_n_turns=2)
-                if context.get("turns") and len(context["turns"]) >= 1:
-                    # Get the most recent turn (before current)
-                    previous_turn = context["turns"][-1]
-                    # Check if previous agent was a data source (RAG, search, etc.)
+            request_lower = request.lower()
+            is_report_request = any(
+                keyword in request_lower 
+                for keyword in ['report', 'generate', 'create', 'make']
+            )
+            
+            # Get conversation history
+            context = self.context_manager.get_conversation_context(
+                state["session_id"], 
+                last_n_turns=3  # Include last 3 turns for better context
+            )
+            
+            if context.get("turns") and len(context["turns"]) >= 1:
+                # Format conversation turns for context (used for both report and non-report requests)
+                conversation_history = []
+                for turn in context["turns"]:
+                    conversation_history.append({
+                        "user_query": turn.get("user_query", ""),
+                        "agent_name": turn.get("agent_name", ""),
+                        "agent_response": turn.get("agent_response", "")[:500]  # Limit response length
+                    })
+                
+                # Get previous turn information
+                previous_turn = context["turns"][-1]
+                
+                # For report requests: also include full previous data if from data source agent
+                previous_data = None
+                if is_report_request:
                     data_agents = ['RAG Agent', 'rag', 'search', 'query', 'weather']
-                    if any(agent.lower() in previous_turn.get("agent_name", "").lower() for agent in data_agents):
-                        context_data = {
-                            "previous_data": previous_turn.get("agent_response", ""),
-                            "previous_agent": previous_turn.get("agent_name", "Unknown"),
-                            "previous_query": previous_turn.get("user_query", "")
-                        }
-                        print(f"   Found context from previous {context_data['previous_agent']} response")
+                    is_data_source = any(
+                        agent.lower() in previous_turn.get("agent_name", "").lower() 
+                        for agent in data_agents
+                    )
+                    if is_data_source:
+                        previous_data = previous_turn.get("agent_response", "")
+                        print(
+                            f"   Found data context from previous {previous_turn.get('agent_name', 'Unknown')} "
+                            f"response for report generation"
+                        )
+                
+                # Create context data (same structure for both report and non-report requests)
+                context_data = {
+                    "conversation_turns": conversation_history,
+                    "previous_agent": previous_turn.get("agent_name", "Unknown"),
+                    "previous_query": previous_turn.get("user_query", ""),
+                    "previous_data": previous_data
+                }
+                
+                request_type = "report generation" if is_report_request else "request"
+                print(
+                    f"   Including conversation context ({len(conversation_history)} previous turns) "
+                    f"for {request_type}"
+                )
             
             print(f"   Forwarding request to agent...")
             # Forward the request to the selected agent and get the actual response
@@ -634,18 +678,77 @@ class SmartOrchestrator:
             print(f"WARNING: Invalid session_id '{session_id}' - getting valid session from context manager")
             context_id = self.context_manager.get_or_create_session(session_id)
         
-        # Enhance request with context data if provided (especially for report agent)
+        # Enhance request with context data if provided
         enhanced_request = request
-        if context_data and context_data.get("previous_data"):
-            # For report agent, include the previous data in a structured way
-            if "report" in request.lower() or "generate" in request.lower():
-                enhanced_request = f"""{request}
-
-Context from previous query:
-{context_data['previous_data']}
-
-Please use the above context/data to generate the report."""
-                print(f"   Enhanced request with context from {context_data.get('previous_agent', 'previous agent')}")
+        if context_data:
+            request_lower = request.lower()
+            is_report_request = any(
+                keyword in request_lower 
+                for keyword in ['report', 'generate', 'create', 'make']
+            )
+            
+            # For report requests: include both conversation history AND previous data
+            if is_report_request:
+                context_parts = []
+                
+                # Add conversation history if available
+                if context_data.get("conversation_turns"):
+                    history_text = "Previous conversation:\n"
+                    for i, turn in enumerate(context_data["conversation_turns"], 1):
+                        history_text += (
+                            f"\n[{i}] User: {turn['user_query']}\n"
+                            f"    {turn['agent_name']}: {turn['agent_response'][:200]}...\n"
+                        )
+                    context_parts.append(history_text)
+                
+                # Add full previous data if available (from data source agents)
+                if context_data.get("previous_data"):
+                    context_parts.append(
+                        f"Detailed data from most recent query:\n"
+                        f"{context_data['previous_data']}\n"
+                    )
+                
+                # Combine all context parts
+                if context_parts:
+                    if "report" in request_lower or "generate" in request_lower or "create" in request_lower:
+                        instruction = "Please use the above conversation context and data to generate a comprehensive report."
+                    elif "analyze" in request_lower or "analysis" in request_lower:
+                        instruction = "Please analyze the above conversation context and data."
+                    elif "summarize" in request_lower or "summarise" in request_lower:
+                        instruction = "Please summarize the above conversation context and data."
+                    else:
+                        instruction = "Please use the above conversation context and data as needed."
+                    
+                    enhanced_request = (
+                        f"{request}\n\n"
+                        f"{''.join(context_parts)}\n"
+                        f"{instruction}"
+                    )
+                    print(
+                        f"   Enhanced report request with conversation context "
+                        f"({len(context_data.get('conversation_turns', []))} turns) "
+                        f"and previous data"
+                    )
+            
+            # For non-report requests: include conversation history
+            elif context_data.get("conversation_turns"):
+                # Format conversation history
+                history_text = "Previous conversation:\n"
+                for i, turn in enumerate(context_data["conversation_turns"], 1):
+                    history_text += (
+                        f"\n[{i}] User: {turn['user_query']}\n"
+                        f"    {turn['agent_name']}: {turn['agent_response'][:200]}...\n"
+                    )
+                
+                enhanced_request = (
+                    f"{request}\n\n"
+                    f"{history_text}\n"
+                    f"Please use the above conversation context to answer the current request."
+                )
+                print(
+                    f"   Enhanced request with conversation context "
+                    f"({len(context_data['conversation_turns'])} turns)"
+                )
         
         # Create A2A JSON-RPC request payload using message/send method
         task_id = str(uuid4())

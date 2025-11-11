@@ -109,7 +109,7 @@ class OrchestratorAgentExecutor(AgentExecutor):
                 if result.get("success", False):
                     # Log all registered agent details after successful registration
                     logger.info("=" * 80)
-                    logger.info("🎉 AGENT REGISTRATION SUCCESSFUL - ALL REGISTERED AGENTS:")
+                    logger.info("AGENT REGISTRATION SUCCESSFUL - ALL REGISTERED AGENTS:")
                     logger.info("=" * 80)
                     
                     for agent_id, agent_card in self.orchestrator.agents.items():
@@ -132,7 +132,6 @@ class OrchestratorAgentExecutor(AgentExecutor):
                         capabilities = agent_card.capabilities
                         logger.info(f"  Capabilities:")
                         logger.info(f"    • Streaming: {capabilities.streaming}")
-                        logger.info(f"    • Push Notifications: {getattr(capabilities, 'push_notifications', False)}")
                         logger.info(f"    • State Transition History: {getattr(capabilities, 'state_transition_history', False)}")
                         
                         logger.info("-" * 40)

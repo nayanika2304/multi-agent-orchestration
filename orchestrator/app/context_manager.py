@@ -232,10 +232,10 @@ class OrchestratorContextManager:
         # Format the enriched query to include the previous data
         enriched = f"""{user_query}
 
-Previous data/response to analyze:
-{previous_data}
+                    Previous data/response to analyze:
+                    {previous_data}
 
-Please generate a report based on the above data."""
+                    Please generate a report based on the above data."""
         
         return enriched
     

@@ -246,7 +246,7 @@ async def process_query(
     The orchestrator will route the query to the most appropriate agent.
     """
     print(f"\n{'='*80}")
-    print(f"📥 QUERY REQUEST RECEIVED")
+    print(f"QUERY REQUEST RECEIVED")
     print(f"{'='*80}")
     print(f"Query: {request.query}")
     print(f"Session ID: {request.session_id}")

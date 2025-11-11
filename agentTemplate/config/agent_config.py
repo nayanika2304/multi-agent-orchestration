@@ -48,7 +48,6 @@ def get_agent_capabilities():
     """Get agent capabilities"""
     return AgentCapabilities(
         streaming=True,
-        pushNotifications=True,
         stateTransitionHistory=False
     )
 

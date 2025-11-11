@@ -1,14 +1,13 @@
+import argparse
 import logging
 import os
 import sys
 
-import click
-import httpx
 import uvicorn
 
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, InMemoryTaskStore
+from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import (
     AgentCapabilities,
     AgentCard,
@@ -33,21 +32,34 @@ class MissingAPIKeyError(Exception):
     """Exception for missing API key."""
 
 
-@click.command()
-@click.option('--host', 'host', default='localhost')
-@click.option('--port', 'port', default=8002)
-def main(host, port):
+def main():
     """Starts the Currency Agent server."""
+    parser = argparse.ArgumentParser(
+        description="Currency Agent server"
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Host to bind to (default: localhost)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8002,
+        help="Port to bind to (default: 8002)"
+    )
+    args = parser.parse_args()
+    
+    host = args.host
+    port = args.port
+    
     try:
         if not os.getenv('OPENAI_API_KEY'):
             raise MissingAPIKeyError(
                 'OPENAI_API_KEY environment variable not set. Please set it in the .env file.'
             )
     
-        capabilities = AgentCapabilities(
-            streaming=True, 
-            pushNotifications=True
-            )
+        capabilities = AgentCapabilities(streaming=True)
         
         # Enhanced skills with currency codes for better orchestrator routing
         currency_skills = [
@@ -100,12 +112,9 @@ def main(host, port):
         )
 
         # --8<-- [start:DefaultRequestHandler]
-        httpx_client = httpx.AsyncClient()
         request_handler = DefaultRequestHandler(
             agent_executor=CurrencyAgentExecutor(),
             task_store=InMemoryTaskStore(),
-            push_config_store=InMemoryPushNotificationConfigStore(),
-            push_sender=BasePushNotificationSender(httpx_client, InMemoryPushNotificationConfigStore()),
         )
         server = A2AStarletteApplication(
             agent_card=agent_card, http_handler=request_handler

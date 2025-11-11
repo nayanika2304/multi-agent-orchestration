@@ -155,8 +155,7 @@ curl http://localhost:8000/management/api/v1/agents/list_agents
       "skills": [
         {"name": "Currency Exchange", "description": "Convert between currencies"}
       ],
-      "keywords": ["currency", "exchange", "rate"],
-      "capabilities": ["pushNotifications"]
+      "keywords": ["currency", "exchange", "rate"]
     }
   ],
   "total_count": 1,

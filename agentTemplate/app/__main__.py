@@ -3,18 +3,17 @@ Agent Template - Main Entry Point
 A2A + LangGraph pluggable agent template
 """
 
+import argparse
 import logging
 import os
 import sys
 
-import click
-import httpx
 import uvicorn
 from dotenv import load_dotenv
 
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, InMemoryTaskStore
+from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCard
 
 from config.agent_config import (
@@ -96,21 +95,35 @@ def print_startup_info(host: str, port: int):
     print(f"  • Plugin Status: http://{host}:{port}/plugin/status")
     print()
 
-@click.command()
-@click.option('--host', default=None, help='Host to bind to')
-@click.option('--port', default=None, type=int, help='Port to bind to')
-@click.option('--log-level', default='INFO', help='Logging level')
-def main(host: str, port: int, log_level: str):
+def main():
     """Start the Template Agent server"""
+    parser = argparse.ArgumentParser(
+        description="Template Agent server"
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Host to bind to (default: from config or localhost)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Port to bind to (default: from config or 8004)"
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        help="Logging level (default: INFO)"
+    )
+    args = parser.parse_args()
     
     # Set up logging
-    logging.basicConfig(level=getattr(logging, log_level.upper(), logging.INFO))
+    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO))
     
     # Get configuration
-    if host is None:
-        host = get_agent_host()
-    if port is None:
-        port = get_agent_port()
+    host = args.host if args.host is not None else get_agent_host()
+    port = args.port if args.port is not None else get_agent_port()
     
     try:
         # Validate configuration
@@ -123,12 +136,9 @@ def main(host: str, port: int, log_level: str):
         agent_card = create_agent_card(host, port)
         
         # Create server components
-        httpx_client = httpx.AsyncClient()
         request_handler = DefaultRequestHandler(
             agent_executor=TemplateAgentExecutor(),
             task_store=InMemoryTaskStore(),
-            push_config_store=InMemoryPushNotificationConfigStore(),
-            push_sender=BasePushNotificationSender(httpx_client, InMemoryPushNotificationConfigStore()),
         )
         
         # Create A2A application
@@ -168,7 +178,7 @@ def main(host: str, port: int, log_level: str):
         print()
         
         # Run server
-        uvicorn.run(app, host=host, port=port, log_level=log_level.lower())
+        uvicorn.run(app, host=host, port=port, log_level=args.log_level.lower())
         
     except MissingConfigError as e:
         logger.error(f'Configuration Error: {e}')

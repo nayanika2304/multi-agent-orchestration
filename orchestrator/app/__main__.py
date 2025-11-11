@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-import click
+import argparse
 import httpx
 import uvicorn
 from dotenv import load_dotenv
@@ -18,7 +18,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.routing import Mount
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import BasePushNotificationSender, InMemoryPushNotificationConfigStore, InMemoryTaskStore
+from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCard, AgentSkill, AgentCapabilities
 from a2a.client import A2ACardResolver
 
@@ -88,7 +88,6 @@ def create_orchestrator_agent_card(host: str, port: int) -> AgentCard:
     
     capabilities = AgentCapabilities(
         streaming=False,
-        pushNotifications=True,
         stateTransitionHistory=False
     )
     
@@ -186,8 +185,6 @@ def create_combined_app(host: str, port: int, orchestrator: SmartOrchestrator) -
     request_handler = DefaultRequestHandler(
         agent_executor=OrchestratorAgentExecutor(),
         task_store=InMemoryTaskStore(),
-        push_config_store=InMemoryPushNotificationConfigStore(),
-        push_sender=BasePushNotificationSender(httpx_client, InMemoryPushNotificationConfigStore()),
     )
     a2a_app = A2AStarletteApplication(
         agent_card=agent_card, 
@@ -213,11 +210,26 @@ def create_combined_app(host: str, port: int, orchestrator: SmartOrchestrator) -
     return combined_app
 
 
-@click.command()
-@click.option("--host", default="localhost", help="Host to bind to")
-@click.option("--port", default=8000, help="Port to bind to")
-def main(host: str, port: int):
+def main():
     """Starts the Orchestrator Agent server with FastAPI management endpoints."""
+    parser = argparse.ArgumentParser(
+        description="Smart Orchestrator Agent server with FastAPI management endpoints"
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Host to bind to (default: localhost)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to (default: 8000)"
+    )
+    args = parser.parse_args()
+    
+    host = args.host
+    port = args.port
     try:
         # Create orchestrator instance
         logger.info("Initializing SmartOrchestrator...")
