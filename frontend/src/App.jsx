@@ -242,8 +242,8 @@ function App() {
     <div className="app">
       <div className="chat-container">
         <header className="chat-header">
-          <h1>Multi-Agent Orchestrator</h1>
-          <p className="subtitle">Intelligent routing to specialized agents</p>
+          <h1>Multi AI Agents Orchestrator</h1>
+          <p className="subtitle">Intelligent routing to specialized AI Agents</p>
           <div className="tabs">
             <button
               className={`tab ${activeTab === 'chat' ? 'active' : ''}`}
@@ -255,7 +255,7 @@ function App() {
               className={`tab ${activeTab === 'agents' ? 'active' : ''}`}
               onClick={() => setActiveTab('agents')}
             >
-              Agents
+              AI Agents
             </button>
           </div>
         </header>
@@ -265,7 +265,7 @@ function App() {
             <div className="chat-messages">
               {messages.length === 0 && (
                 <div className="welcome-message">
-                  <p>Welcome! Ask me anything and I'll route your query to the best agent.</p>
+                  <p>Welcome! Ask me anything and I'll route your query to the best AI Agent.</p>
                   <div className="example-buttons">
                     <button
                       onClick={() => setQuery("What time is it in New York?")}
